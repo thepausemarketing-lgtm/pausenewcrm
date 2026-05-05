@@ -236,7 +236,7 @@ export default function CalendarView({ items: initialItems, clients, year, month
     switch (dateFilter) {
       case 'today':    filtered = items.filter(i => getPublishDate(i) === today); break
       case 'tomorrow': filtered = items.filter(i => getPublishDate(i) === tomorrow); break
-      case 'overdue':  filtered = items.filter(i => { const d = getPublishDate(i); return !!(d && d < today) }); break
+      case 'overdue':  filtered = items.filter(i => { const d = getPublishDate(i); const posted = Object.values(i.live_links ?? {}).some(v => v); return !!(d && d < today) && !posted }); break
       case 'custom':
         filtered = items.filter(i => {
           const d = getPublishDate(i); if (!d) return false
@@ -258,7 +258,7 @@ export default function CalendarView({ items: initialItems, clients, year, month
     all:      items.length,
     today:    items.filter(i => getPublishDate(i) === today).length,
     tomorrow: items.filter(i => getPublishDate(i) === tomorrow).length,
-    overdue:  items.filter(i => { const d = getPublishDate(i); return !!(d && d < today) }).length,
+    overdue:  items.filter(i => { const d = getPublishDate(i); const posted = Object.values(i.live_links ?? {}).some(v => v); return !!(d && d < today) && !posted }).length,
     custom:   dateFilter === 'custom' ? listItems.length : 0,
   }
 
