@@ -14,15 +14,14 @@ export const PLATFORMS: { value: Platform; label: string; color: string }[] = [
 ]
 
 export const CONTENT_TYPES: { value: ContentType; label: string }[] = [
-  { value: 'post', label: 'Post' },
+  { value: 'single_image', label: 'Single' },
   { value: 'story', label: 'Story' },
   { value: 'reel', label: 'Reel' },
   { value: 'carousel', label: 'Carousel' },
-  { value: 'single_image', label: 'Single Image' },
   { value: 'ad', label: 'Ad' },
   { value: 'blog_post', label: 'Blog Post' },
   { value: 'email', label: 'Email' },
-  { value: 'video', label: 'Video' },
+  { value: 'video', label: 'Long Form Video' },
   { value: 'other', label: 'Other' },
 ]
 
