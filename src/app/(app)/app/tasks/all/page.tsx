@@ -16,7 +16,7 @@ export default async function AllTasksPage() {
       .order('due_date', { ascending: true, nullsFirst: false })
       .limit(200),
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
-    supabase.from('clients').select('id, name, parent_client_id').eq('status', 'active').order('name'),
+    supabase.from('clients').select('id, name, parent_client_id').not('status', 'eq', 'churned').order('name'),
   ])
 
   return (

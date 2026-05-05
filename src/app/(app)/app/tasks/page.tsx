@@ -38,7 +38,7 @@ export default async function MyTasksPage() {
       .is('parent_task_id', null)
       .order('due_date', { ascending: true, nullsFirst: false }),
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
-    supabase.from('clients').select('id, name, parent_client_id').eq('status', 'active').order('name'),
+    supabase.from('clients').select('id, name, parent_client_id').not('status', 'eq', 'churned').order('name'),
   ])
 
   return (

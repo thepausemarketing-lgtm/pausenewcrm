@@ -18,7 +18,7 @@ export default async function TaskBoardPage() {
     .order('position', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false })
 
-  const { data: clients } = await supabase.from('clients').select('id,name,parent_client_id').eq('status', 'active').order('name')
+  const { data: clients } = await supabase.from('clients').select('id,name,parent_client_id').not('status', 'eq', 'churned').order('name')
   const { data: profiles } = await supabase.from('profiles').select('id,full_name').eq('is_active', true).order('full_name')
 
   return (

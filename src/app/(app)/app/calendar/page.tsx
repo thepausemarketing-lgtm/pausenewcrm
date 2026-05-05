@@ -31,7 +31,7 @@ export default async function CalendarPage({
 
   const [{ data: rawItems }, { data: rawClients }] = await Promise.all([
     query,
-    supabase.from('clients').select('id,name,parent_client_id').eq('status', 'active').order('name'),
+    supabase.from('clients').select('id,name,parent_client_id').not('status', 'eq', 'churned').order('name'),
   ])
 
   const { data: { user } } = await supabase.auth.getUser()
