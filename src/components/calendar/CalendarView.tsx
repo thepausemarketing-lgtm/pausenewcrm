@@ -107,6 +107,11 @@ const DATE_TABS: { key: DateFilter; label: string; icon: React.ElementType }[] =
 export default function CalendarView({ items: initialItems, clients, year, month, canApprove, filters }: Props) {
   const router = useRouter()
   const [items, setItems] = useState(initialItems)
+
+  // Sync items when server refetches due to filter URL changes
+  useEffect(() => {
+    setItems(initialItems)
+  }, [initialItems])
   const [selectedItem, setSelectedItem] = useState<ItemWithRelations | null>(null)
   const [createDate, setCreateDate] = useState<string | null>(null)
   const [view, setView] = useState<'calendar' | 'list'>('calendar')
