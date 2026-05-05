@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import type { Profile, UserRole, Designation } from '@/types/database.types'
 import { getInitials } from '@/lib/utils'
-import { UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
+import { UserPlus, ChevronDown, ChevronRight, Users } from 'lucide-react'
 
 const ROLE_COLORS: Record<UserRole, string> = {
   admin:   'bg-purple-100 text-purple-700',
@@ -102,37 +102,70 @@ export default function TeamManagement({ profiles: initialProfiles, designations
     await handleUpdate(profileId, { is_active: !currentActive })
   }
 
-  // Build hierarchy tree for display
-  // Top level = no reports_to OR reports_to points to someone outside the list
+  // Build hierarchy tree
   const topLevel = profiles.filter(p => !p.reports_to || !profiles.find(x => x.id === p.reports_to))
   const getDirectReports = (id: string) => profiles.filter(p => p.reports_to === id)
 
-  const renderProfile = (profile: ProfileWithDesignation, depth = 0) => {
+  const renderProfile = (profile: ProfileWithDesignation, depth = 0, isLast = false) => {
     const directReports = getDirectReports(profile.id)
     const isExpanded = expandedEdit === profile.id
     const desig = designations.find(d => d.id === profile.designation_id)
     const reportsToProfile = profiles.find(p => p.id === profile.reports_to)
+    const hasReports = directReports.length > 0
 
     return (
-      <div key={profile.id}>
-        <div className={`flex items-center gap-3 p-3 rounded-xl border transition-colors ${profile.is_active ? 'border-gray-100 bg-white' : 'border-gray-50 bg-gray-50 opacity-60'}`}
-          style={{ marginLeft: depth * 24 }}>
-          <Avatar className="h-8 w-8 shrink-0">
-            <AvatarImage src={profile.avatar_url ?? undefined} />
-            <AvatarFallback className="text-xs bg-gray-200 text-gray-600">
-              {getInitials(profile.full_name || '?')}
-            </AvatarFallback>
-          </Avatar>
+      <div key={profile.id} className="relative">
+        {/* Tree connector lines */}
+        {depth > 0 && (
+          <>
+            {/* Vertical line from parent */}
+            <div
+              className="absolute border-l-2 border-dashed border-gray-200"
+              style={{ left: depth * 28 - 14, top: 0, bottom: isLast ? '50%' : 0 }}
+            />
+            {/* Horizontal connector to this node */}
+            <div
+              className="absolute border-t-2 border-dashed border-gray-200"
+              style={{ left: depth * 28 - 14, top: 20, width: 14 }}
+            />
+          </>
+        )}
+
+        <div
+          className={`relative flex items-center gap-3 p-3 rounded-xl border transition-colors ${profile.is_active ? 'border-gray-100 bg-white' : 'border-gray-50 bg-gray-50 opacity-60'}`}
+          style={{ marginLeft: depth * 28 }}
+        >
+          {/* Avatar with report-count badge */}
+          <div className="relative shrink-0">
+            <Avatar className="h-8 w-8">
+              <AvatarImage src={profile.avatar_url ?? undefined} />
+              <AvatarFallback className="text-xs bg-violet-100 text-violet-700 font-semibold">
+                {getInitials(profile.full_name || '?')}
+              </AvatarFallback>
+            </Avatar>
+            {hasReports && (
+              <div className="absolute -bottom-1 -right-1 bg-violet-600 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                {directReports.length}
+              </div>
+            )}
+          </div>
 
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <p className="text-sm font-medium text-gray-900 truncate">{profile.full_name || '(pending)'}</p>
               {desig && (
-                <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{desig.name}</span>
+                <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">{desig.name}</span>
               )}
             </div>
             {reportsToProfile && (
-              <p className="text-xs text-gray-400">Reports to {reportsToProfile.full_name}</p>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Reports to <span className="text-gray-600 font-medium">{reportsToProfile.full_name}</span>
+              </p>
+            )}
+            {hasReports && (
+              <p className="text-xs text-violet-500 mt-0.5">
+                {directReports.length} direct report{directReports.length > 1 ? 's' : ''}
+              </p>
             )}
           </div>
 
@@ -161,8 +194,10 @@ export default function TeamManagement({ profiles: initialProfiles, designations
 
         {/* Inline edit panel */}
         {isExpanded && (
-          <div className="ml-8 mt-1 mb-2 bg-gray-50 border border-gray-100 rounded-xl p-4 grid grid-cols-2 gap-3"
-            style={{ marginLeft: depth * 24 + 32 }}>
+          <div
+            className="mt-1 mb-2 bg-gray-50 border border-gray-100 rounded-xl p-4 grid grid-cols-2 gap-3"
+            style={{ marginLeft: depth * 28 + 32 }}
+          >
             <div className="space-y-1">
               <Label className="text-xs">Role</Label>
               <select className={nativeSelect + ' w-full'}
@@ -185,21 +220,24 @@ export default function TeamManagement({ profiles: initialProfiles, designations
             </div>
 
             <div className="space-y-1 col-span-2">
-              <Label className="text-xs">Reports To (manager / boss)</Label>
+              <Label className="text-xs">Reports To (who is their direct manager?)</Label>
               <select className={nativeSelect + ' w-full'}
                 value={profile.reports_to ?? ''}
                 onChange={e => handleUpdate(profile.id, { reports_to: e.target.value || null })}>
-                <option value="">— No one (top of hierarchy) —</option>
+                <option value="">— Top of hierarchy (no one above them) —</option>
                 {profiles.filter(p => p.id !== profile.id).map(p => (
                   <option key={p.id} value={p.id}>{p.full_name}</option>
                 ))}
               </select>
+              <p className="text-xs text-gray-400 mt-1">
+                This person will be able to see all work assigned to their direct and indirect reports.
+              </p>
             </div>
           </div>
         )}
 
-        {/* Direct reports (indented) */}
-        {directReports.map(dr => renderProfile(dr, depth + 1))}
+        {/* Direct reports rendered below with increased depth */}
+        {directReports.map((dr, i) => renderProfile(dr, depth + 1, i === directReports.length - 1))}
       </div>
     )
   }
@@ -279,11 +317,31 @@ export default function TeamManagement({ profiles: initialProfiles, designations
         )}
       </div>
 
-      {/* Team hierarchy */}
+      {/* Team org chart */}
       <div>
-        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Team Hierarchy</p>
-        <div className="space-y-1.5">
-          {topLevel.map(p => renderProfile(p, 0))}
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide flex items-center gap-1.5">
+            <Users size={12} /> Org Chart
+          </p>
+          <p className="text-xs text-gray-400">{profiles.length} member{profiles.length !== 1 ? 's' : ''}</p>
+        </div>
+
+        <div className="bg-gray-50/50 rounded-2xl border border-gray-100 p-4">
+          {/* Legend */}
+          <div className="flex items-center gap-4 mb-4 pb-3 border-b border-gray-100">
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="w-3 h-px border-t-2 border-dashed border-gray-300" />
+              Reports to
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <div className="w-4 h-4 rounded-full bg-violet-600 text-white text-[9px] font-bold flex items-center justify-center">2</div>
+              Direct reports count
+            </div>
+          </div>
+
+          <div className="space-y-2 overflow-x-auto">
+            {topLevel.map((p, i) => renderProfile(p, 0, i === topLevel.length - 1))}
+          </div>
         </div>
       </div>
     </div>

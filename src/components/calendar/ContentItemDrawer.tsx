@@ -12,9 +12,15 @@ import type { ContentItem } from '@/types/database.types'
 import { useRole } from '@/context/RoleContext'
 import { formatDateTime } from '@/lib/utils'
 
+type ContentAssigneeRef = {
+  user_id: string
+  user: { id: string; full_name: string; avatar_url: string | null } | null
+}
+
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
   assignee?: { full_name: string } | null
+  content_assignees?: ContentAssigneeRef[]
 }
 
 const APPROVABLE_STATUSES = ['approved', 'scheduled', 'published']
@@ -100,13 +106,26 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
   const [referenceLink, setReferenceLink] = useState(item?.reference_link ?? '')
   const [liveLinks, setLiveLinks] = useState<Record<string, string>>(item?.live_links ?? {})
   const [designDate, setDesignDate] = useState(item?.design_date ?? '')
-  const [assignedTo, setAssignedTo] = useState(item?.assigned_to ?? '')
   const [profilesList, setProfilesList] = useState<{ id: string; full_name: string }[]>([])
+
+  // Multi-assignee: initialise from content_assignees OR legacy assigned_to
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(() => {
+    if (item?.content_assignees && item.content_assignees.length > 0) {
+      return item.content_assignees.map(a => a.user_id)
+    }
+    return item?.assigned_to ? [item.assigned_to] : []
+  })
+
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    createClient().from('profiles').select('id, full_name').eq('is_active', true).order('full_name').then(({ data }) => setProfilesList(data ?? []))
+    createClient()
+      .from('profiles')
+      .select('id, full_name')
+      .eq('is_active', true)
+      .order('full_name')
+      .then(({ data }) => setProfilesList(data ?? []))
   }, [])
 
   const togglePlatform = (val: string) => {
@@ -125,6 +144,8 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
     setSaving(true)
     setSaveError(null)
 
+    const primaryAssignee = selectedAssignees[0] ?? null
+
     const payload = {
       title: title.trim(),
       ...(clientId ? { client_id: clientId } : {}),
@@ -140,7 +161,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
       internal_review: internalReview,
       client_approval: clientApproval,
       live_links: liveLinks,
-      assigned_to: assignedTo || null,
+      assigned_to: primaryAssignee,
     }
 
     if (isNew) {
@@ -153,11 +174,21 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
       const data = rawData as ItemWithRelations | null
       if (error) {
         setSaveError(error.message)
-      } else if (data && onCreate) {
+      } else if (data) {
+        // Insert all assignees into content_assignees
+        if (selectedAssignees.length > 0) {
+          await (supabase as any).from('content_assignees').insert(
+            selectedAssignees.map(uid => ({
+              content_item_id: data.id,
+              user_id: uid,
+              assigned_by: profile.id,
+            }))
+          )
+        }
         await supabase.from('activity_logs').insert({
           actor_id: profile.id, action: 'created_content', entity_type: 'content_item', entity_id: data.id,
         })
-        onCreate(data)
+        if (onCreate) onCreate({ ...data, content_assignees: [] })
       }
     } else {
       const { data, error } = await supabase
@@ -168,8 +199,19 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
         .single()
       if (error) {
         setSaveError(error.message)
-      } else if (data && onUpdate) {
-        onUpdate(data as ItemWithRelations)
+      } else if (data) {
+        // Sync content_assignees: delete all then re-insert
+        await (supabase as any).from('content_assignees').delete().eq('content_item_id', item.id)
+        if (selectedAssignees.length > 0) {
+          await (supabase as any).from('content_assignees').insert(
+            selectedAssignees.map(uid => ({
+              content_item_id: item.id,
+              user_id: uid,
+              assigned_by: profile.id,
+            }))
+          )
+        }
+        if (onUpdate) onUpdate(data as ItemWithRelations)
       }
     }
     setSaving(false)
@@ -260,21 +302,32 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
               <DateInput value={designDate} onChange={setDesignDate} />
             </div>
 
-            <div className="space-y-1.5">
+            <div className="space-y-1.5 col-span-2">
               <Label>Publish Date/Time</Label>
               <DateTimeInput value={publishAt} onChange={setPublishAt} />
             </div>
+          </div>
 
-            <div className="space-y-1.5">
-              <Label>Assigned To</Label>
-              <select
-                value={assignedTo}
-                onChange={e => setAssignedTo(e.target.value)}
-                className="w-full h-9 px-2 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400"
-              >
-                <option value="">Unassigned</option>
-                {profilesList.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-              </select>
+          {/* Assignees (multi-select) */}
+          <div className="space-y-1.5">
+            <Label>Assigned To</Label>
+            <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-36 overflow-y-auto">
+              {profilesList.map(p => (
+                <label
+                  key={p.id}
+                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedAssignees.includes(p.id)}
+                    onChange={e => setSelectedAssignees(prev =>
+                      e.target.checked ? [...prev, p.id] : prev.filter(id => id !== p.id)
+                    )}
+                    className="accent-violet-600"
+                  />
+                  {p.full_name}
+                </label>
+              ))}
             </div>
           </div>
 
