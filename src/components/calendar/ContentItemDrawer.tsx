@@ -10,6 +10,7 @@ import { createClient } from '@/lib/supabase/client'
 import { PLATFORMS, CONTENT_TYPES, CONTENT_STATUSES } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 import { useRole } from '@/context/RoleContext'
+import { formatDateTime } from '@/lib/utils'
 
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
@@ -353,7 +354,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
 
           {!isNew && item?.created_at && (
             <p className="text-xs text-gray-400">
-              Created {new Date(item.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              Created {formatDateTime(item.created_at)}
             </p>
           )}
 

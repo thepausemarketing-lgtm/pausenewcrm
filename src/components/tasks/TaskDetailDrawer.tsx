@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { createClient } from '@/lib/supabase/client'
 import { TASK_PRIORITIES, TASK_CATEGORIES, TASK_STATUSES } from '@/lib/constants'
 import type { Task, TaskComment } from '@/types/database.types'
-import { timeAgo, getInitials } from '@/lib/utils'
+import { timeAgo, getInitials, formatDateTime } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Trash2, Send, Repeat2, X, UserPlus } from 'lucide-react'
 import { useRole } from '@/context/RoleContext'
@@ -404,7 +404,7 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
 
           <div className="flex items-center justify-between">
             <p className="text-xs text-gray-400">
-              Created {new Date(task.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              Created {formatDateTime(task.created_at)}
             </p>
             <Button onClick={handleSave} disabled={saving} size="sm">
               {saving ? 'Saving…' : 'Save Changes'}

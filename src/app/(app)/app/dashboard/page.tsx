@@ -160,7 +160,7 @@ export default async function DashboardPage() {
                       {' '}{log.action.replace(/_/g, ' ')}
                     </p>
                     <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>

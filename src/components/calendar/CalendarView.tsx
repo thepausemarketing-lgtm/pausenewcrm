@@ -227,19 +227,26 @@ export default function CalendarView({ items: initialItems, clients, year, month
     item.publish_at ? item.publish_at.slice(0, 10) : null
 
   const listItems = useMemo(() => {
+    let filtered: ItemWithRelations[]
     switch (dateFilter) {
-      case 'today':    return items.filter(i => getPublishDate(i) === today)
-      case 'tomorrow': return items.filter(i => getPublishDate(i) === tomorrow)
-      case 'overdue':  return items.filter(i => { const d = getPublishDate(i); return d && d < today })
+      case 'today':    filtered = items.filter(i => getPublishDate(i) === today); break
+      case 'tomorrow': filtered = items.filter(i => getPublishDate(i) === tomorrow); break
+      case 'overdue':  filtered = items.filter(i => { const d = getPublishDate(i); return !!(d && d < today) }); break
       case 'custom':
-        return items.filter(i => {
+        filtered = items.filter(i => {
           const d = getPublishDate(i); if (!d) return false
           if (customFrom && d < customFrom) return false
           if (customTo && d > customTo) return false
           return true
-        })
-      default: return items
+        }); break
+      default: filtered = [...items]
     }
+    // Always sort ascending by publish date
+    return filtered.sort((a, b) => {
+      const da = a.publish_at ?? ''
+      const db = b.publish_at ?? ''
+      return da < db ? -1 : da > db ? 1 : 0
+    })
   }, [items, dateFilter, today, tomorrow, customFrom, customTo])
 
   const dateCounts: Record<DateFilter, number> = {
