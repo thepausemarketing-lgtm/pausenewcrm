@@ -21,7 +21,7 @@ const APPROVABLE_STATUSES = ['approved', 'scheduled', 'published']
 interface Props {
   item?: ItemWithRelations
   defaultDate?: string
-  clients: { id: string; name: string }[]
+  clients: { id: string; name: string; parent_client_id?: string | null }[]
   canApprove: boolean
   onClose: () => void
   onUpdate?: (item: ItemWithRelations) => void
@@ -181,7 +181,16 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
               className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400"
             >
               <option value="">Select client…</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {/* Parent clients */}
+              {clients.filter(c => !c.parent_client_id).map(parent => (
+                <optgroup key={parent.id} label={parent.name}>
+                  <option value={parent.id}>{parent.name}</option>
+                  {clients.filter(c => c.parent_client_id === parent.id).map(sub => (
+                    <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+              {/* Clients with no parent that aren't parents themselves — already covered above */}
             </select>
           </div>
 

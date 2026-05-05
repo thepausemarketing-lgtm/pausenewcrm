@@ -20,7 +20,7 @@ type ItemWithRelations = ContentItem & {
 
 interface Props {
   items: ItemWithRelations[]
-  clients: { id: string; name: string }[]
+  clients: { id: string; name: string; parent_client_id?: string | null }[]
   year: number
   month: number
   canApprove: boolean

@@ -18,7 +18,7 @@ type TaskWithRelations = Task & {
 
 interface Props {
   defaultStatus: string
-  clients: { id: string; name: string }[]
+  clients: { id: string; name: string; parent_client_id?: string | null }[]
   profiles: { id: string; full_name: string }[]
   currentUserId: string
   onCreated: (task: TaskWithRelations) => void
@@ -158,7 +158,14 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
               <Label>Client</Label>
               <select value={clientId} onChange={e => setClientId(e.target.value)} className={sel}>
                 <option value="">No client (optional)</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {clients.filter(c => !c.parent_client_id).map(parent => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {clients.filter(c => c.parent_client_id === parent.id).map(sub => (
+                      <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>

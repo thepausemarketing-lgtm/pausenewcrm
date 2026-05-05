@@ -30,7 +30,7 @@ type AssigneeRow = {
 
 interface Props {
   taskId: string
-  clients: { id: string; name: string }[]
+  clients: { id: string; name: string; parent_client_id?: string | null }[]
   profiles: { id: string; full_name: string }[]
   onClose: () => void
   onUpdate: (task: TaskWithRelations) => void
@@ -300,7 +300,14 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
               <Label>Client</Label>
               <select value={task.client_id ?? ''} onChange={e => setTask({ ...task, client_id: e.target.value || null })} className={sel}>
                 <option value="">No client</option>
-                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                {clients.filter(c => !c.parent_client_id).map(parent => (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name}</option>
+                    {clients.filter(c => c.parent_client_id === parent.id).map(sub => (
+                      <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
           </div>

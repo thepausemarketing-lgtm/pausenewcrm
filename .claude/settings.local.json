@@ -25,7 +25,11 @@
       "Bash(sed -i '' \"s/t\\\\.assignee?.full_name ?? ''/t.task_assignees?.map\\(a => a.user?.full_name\\).filter\\(Boolean\\).join\\(', '\\) ?? ''/g\" /Users/sahiljasuja/Desktop/crm/src/components/tasks/AllTasksClient.tsx)",
       "Bash(sed -i '' 's/task: TaskWithClient/task: TaskWithAssignees/g' /Users/sahiljasuja/Desktop/crm/src/components/tasks/MyTasksClient.tsx)",
       "Bash(sed -i '' 's/task as TaskWithClient/task as TaskWithAssignees/g' /Users/sahiljasuja/Desktop/crm/src/components/tasks/MyTasksClient.tsx)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git rm *)",
+      "Bash(git remote *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

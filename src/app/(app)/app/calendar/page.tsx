@@ -31,7 +31,7 @@ export default async function CalendarPage({
 
   const [{ data: rawItems }, { data: rawClients }] = await Promise.all([
     query,
-    supabase.from('clients').select('id,name').eq('status', 'active').order('name'),
+    supabase.from('clients').select('id,name,parent_client_id').eq('status', 'active').order('name'),
   ])
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -43,7 +43,7 @@ export default async function CalendarPage({
       <div className="max-w-7xl mx-auto">
       <CalendarView
         items={(rawItems ?? []) as Parameters<typeof CalendarView>[0]['items']}
-        clients={(rawClients ?? []) as { id: string; name: string }[]}
+        clients={(rawClients ?? []) as { id: string; name: string; parent_client_id?: string | null }[]}
         year={year}
         month={month}
         canApprove={profile?.role === 'admin' || profile?.role === 'manager'}
