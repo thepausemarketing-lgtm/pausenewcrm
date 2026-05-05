@@ -35,16 +35,11 @@ export default async function ClientsPage({
   const grouped: GroupedRow[] = []
   for (const parent of parents) {
     const children = brands.filter(b => b.parent_client_id === parent.id)
-    if (children.length > 0) {
-      // Parent has sub-brands → show as non-clickable header, then parent + children as clickable
-      grouped.push({ type: 'header', client: parent })
-      grouped.push({ type: 'client', client: parent, indent: 1 })
-      for (const child of children) {
-        grouped.push({ type: 'client', client: child, indent: 1 })
-      }
-    } else {
-      // No sub-brands → directly clickable
-      grouped.push({ type: 'client', client: parent, indent: 0 })
+    // Always show header, then parent + children as clickable below
+    grouped.push({ type: 'header', client: parent })
+    grouped.push({ type: 'client', client: parent, indent: 1 })
+    for (const child of children) {
+      grouped.push({ type: 'client', client: child, indent: 1 })
     }
   }
   // Orphaned brands (parent filtered out)
