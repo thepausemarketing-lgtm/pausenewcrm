@@ -24,24 +24,33 @@ export default async function ClientsPage({
   const { data: rawClients } = await query
   const allClients = (rawClients ?? []) as Client[]
 
-  // Group: top-level clients first, then their brands underneath
   const parents = allClients.filter(c => !c.parent_client_id)
   const brands = allClients.filter(c => c.parent_client_id)
 
-  // Build grouped list: parent → [brands]
-  type GroupedRow = { client: Client; isBrand: boolean }
+  // Each row is either: a non-clickable group header, a clickable client, or a clickable sub-brand
+  type GroupedRow =
+    | { type: 'header'; client: Client }        // non-clickable parent label
+    | { type: 'client'; client: Client; indent: number } // clickable
+
   const grouped: GroupedRow[] = []
   for (const parent of parents) {
-    grouped.push({ client: parent, isBrand: false })
     const children = brands.filter(b => b.parent_client_id === parent.id)
-    for (const child of children) {
-      grouped.push({ client: child, isBrand: true })
+    if (children.length > 0) {
+      // Parent has sub-brands → show as non-clickable header, then parent + children as clickable
+      grouped.push({ type: 'header', client: parent })
+      grouped.push({ type: 'client', client: parent, indent: 1 })
+      for (const child of children) {
+        grouped.push({ type: 'client', client: child, indent: 1 })
+      }
+    } else {
+      // No sub-brands → directly clickable
+      grouped.push({ type: 'client', client: parent, indent: 0 })
     }
   }
-  // Also add any brands whose parent wasn't returned (e.g. filtered out)
+  // Orphaned brands (parent filtered out)
   for (const brand of brands) {
     if (!parents.find(p => p.id === brand.parent_client_id)) {
-      grouped.push({ client: brand, isBrand: true })
+      grouped.push({ type: 'client', client: brand, indent: 1 })
     }
   }
 
@@ -101,40 +110,51 @@ export default async function ClientsPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {grouped.map(({ client, isBrand }) => (
-                <tr key={client.id} className={`hover:bg-gray-50 transition-colors ${isBrand ? 'bg-gray-50/40' : ''}`}>
-                  <td className="px-4 py-3">
-                    <div className={isBrand ? 'pl-5 flex items-center gap-1.5' : ''}>
-                      {isBrand && <ChevronRight size={12} className="text-gray-300 shrink-0" />}
-                      <div>
-                        <Link href={`/app/clients/${client.slug}`} className={`font-medium hover:text-violet-600 ${isBrand ? 'text-gray-600 text-xs' : 'text-gray-900'}`}>
-                          {client.name}
-                        </Link>
-                        {client.website && !isBrand && (
-                          <p className="text-xs text-gray-400 truncate max-w-[200px]">{client.website.replace(/^https?:\/\//, '')}</p>
-                        )}
+              {grouped.map((row, i) => {
+                if (row.type === 'header') {
+                  // Non-clickable group header row
+                  return (
+                    <tr key={`header-${row.client.id}`} className="bg-gray-50">
+                      <td colSpan={5} className="px-4 py-2">
+                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{row.client.name}</span>
+                      </td>
+                    </tr>
+                  )
+                }
+                const { client, indent } = row
+                return (
+                  <tr key={`${client.id}-${i}`} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className={indent > 0 ? 'pl-5 flex items-center gap-1.5' : ''}>
+                        {indent > 0 && <ChevronRight size={12} className="text-gray-300 shrink-0" />}
+                        <div>
+                          <Link href={`/app/clients/${client.slug}`} className="font-medium text-gray-900 hover:text-violet-600">
+                            {client.name}
+                          </Link>
+                          {client.website && indent === 0 && (
+                            <p className="text-xs text-gray-400 truncate max-w-[200px]">{client.website.replace(/^https?:\/\//, '')}</p>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <ClientStatusBadge status={client.status} />
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{client.industry ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-700">
-                    {formatCurrency(client.monthly_value, client.currency)}
-                    {client.monthly_value && <span className="text-xs text-gray-400 ml-1">{client.currency}</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    {client.health_score ? (
-                      <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-green-400' : 'bg-gray-100'}`} />
-                        ))}
-                      </div>
-                    ) : '—'}
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-4 py-3"><ClientStatusBadge status={client.status} /></td>
+                    <td className="px-4 py-3 text-gray-500 text-xs">{client.industry ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {formatCurrency(client.monthly_value, client.currency)}
+                      {client.monthly_value && <span className="text-xs text-gray-400 ml-1">{client.currency}</span>}
+                    </td>
+                    <td className="px-4 py-3">
+                      {client.health_score ? (
+                        <div className="flex gap-0.5">
+                          {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-green-400' : 'bg-gray-100'}`} />
+                          ))}
+                        </div>
+                      ) : '—'}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
