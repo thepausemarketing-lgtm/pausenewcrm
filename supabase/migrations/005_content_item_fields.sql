@@ -1,0 +1,8 @@
+ALTER TABLE content_items
+  ADD COLUMN IF NOT EXISTS design_date DATE,
+  ADD COLUMN IF NOT EXISTS reference_link TEXT,
+  ADD COLUMN IF NOT EXISTS design_status TEXT NOT NULL DEFAULT 'not_started',
+  ADD COLUMN IF NOT EXISTS internal_review TEXT NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS client_approval TEXT NOT NULL DEFAULT 'pending',
+  ADD COLUMN IF NOT EXISTS live_links JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS platforms TEXT[] DEFAULT '{}';

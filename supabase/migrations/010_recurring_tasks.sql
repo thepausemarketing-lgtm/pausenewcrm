@@ -1,0 +1,5 @@
+ALTER TABLE tasks
+  ADD COLUMN IF NOT EXISTS recurrence_type TEXT NOT NULL DEFAULT 'none',
+  ADD COLUMN IF NOT EXISTS recurrence_interval INT NOT NULL DEFAULT 1,
+  ADD COLUMN IF NOT EXISTS recurrence_end_date DATE,
+  ADD COLUMN IF NOT EXISTS recurrence_parent_id UUID REFERENCES tasks(id) ON DELETE SET NULL;

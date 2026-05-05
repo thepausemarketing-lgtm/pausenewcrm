@@ -1,0 +1,19 @@
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
+
+interface Props {
+  label: string
+  color: string
+  className?: string
+}
+
+export default function StatusBadge({ label, color, className }: Props) {
+  return (
+    <span
+      className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium', className)}
+      style={{ backgroundColor: color + '20', color }}
+    >
+      {label}
+    </span>
+  )
+}

@@ -3,7 +3,29 @@
     "allow": [
       "Bash(npm install *)",
       "Bash(pnpm --version)",
-      "Bash(pnpm create *)"
+      "Bash(pnpm create *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm dlx *)",
+      "Bash(pnpm tsc *)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(pnpm dev *)",
+      "Bash(curl -s http://localhost:3000 -o /dev/null -w \"%{http_code}\")",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(curl -s http://localhost:3000/app/dashboard -o /dev/null -w \"%{http_code}\")",
+      "Bash(npx tsc *)",
+      "Bash(sed -i '' 's|<div className=\"max-w-5xl mx-auto space-y-5\">|<div className=\"max-w-5xl mx-auto p-6 space-y-5\">|g' \"/Users/sahiljasuja/Desktop/crm/src/app/\\(app\\)/app/campaigns/[id]/page.tsx\")",
+      "Bash(sed -i '' 's|<div className=\"max-w-2xl mx-auto\">|<div className=\"max-w-2xl mx-auto p-6\">|g' \"/Users/sahiljasuja/Desktop/crm/src/app/\\(app\\)/app/campaigns/new/page.tsx\")",
+      "Bash(sed -i '' 's|<div className=\"max-w-2xl mx-auto\">|<div className=\"max-w-2xl mx-auto p-6\">|g' \"/Users/sahiljasuja/Desktop/crm/src/app/\\(app\\)/app/campaigns/[id]/edit/page.tsx\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3001)",
+      "Bash(kill 19557)",
+      "Read(//tmp/**)",
+      "Bash(sed -i '' 's/task as TaskWithRelations/task as TaskWithAssignees/g' /Users/sahiljasuja/Desktop/crm/src/components/tasks/AllTasksClient.tsx)",
+      "Bash(sed -i '' 's/\\(task: TaskWithRelations\\)/\\(task: TaskWithAssignees\\)/g' /Users/sahiljasuja/Desktop/crm/src/components/tasks/AllTasksClient.tsx)",
+      "Bash(sed -i '' \"s/t\\\\.assignee?.full_name ?? ''/t.task_assignees?.map\\(a => a.user?.full_name\\).filter\\(Boolean\\).join\\(', '\\) ?? ''/g\" /Users/sahiljasuja/Desktop/crm/src/components/tasks/AllTasksClient.tsx)",
+      "Bash(sed -i '' 's/task: TaskWithClient/task: TaskWithAssignees/g' /Users/sahiljasuja/Desktop/crm/src/components/tasks/MyTasksClient.tsx)",
+      "Bash(sed -i '' 's/task as TaskWithClient/task as TaskWithAssignees/g' /Users/sahiljasuja/Desktop/crm/src/components/tasks/MyTasksClient.tsx)",
+      "Bash(git add *)"
     ]
   }
 }
