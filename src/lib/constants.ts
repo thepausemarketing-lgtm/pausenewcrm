@@ -17,6 +17,7 @@ export const CONTENT_TYPES: { value: ContentType; label: string }[] = [
   { value: 'post', label: 'Post' },
   { value: 'story', label: 'Story' },
   { value: 'reel', label: 'Reel' },
+  { value: 'carousel', label: 'Carousel' },
   { value: 'ad', label: 'Ad' },
   { value: 'blog_post', label: 'Blog Post' },
   { value: 'email', label: 'Email' },

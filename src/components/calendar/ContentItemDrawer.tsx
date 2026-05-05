@@ -360,21 +360,19 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
               </select>
             </div>
 
-            {(canApprove || !isNew) && (
-              <div className="space-y-1.5">
-                <Label className="text-xs">Client Approval</Label>
-                <select
-                  value={clientApproval}
-                  onChange={e => setClientApproval(e.target.value)}
-                  className="w-full h-9 px-2 text-sm border border-gray-200 rounded-md bg-white"
-                >
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="changes_required">Changes Required</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-            )}
+            <div className="space-y-1.5">
+              <Label className="text-xs">Client Approval</Label>
+              <select
+                value={clientApproval}
+                onChange={e => setClientApproval(e.target.value)}
+                className="w-full h-9 px-2 text-sm border border-gray-200 rounded-md bg-white"
+              >
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="changes_required">Changes Required</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
           </div>
 
           {/* Section: Links */}
