@@ -151,7 +151,13 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
 
             <div className="space-y-1.5">
               <Label>Due Date</Label>
-              <Input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+              <div className="relative">
+                <input type="text" readOnly placeholder="dd/mm/yyyy"
+                  value={dueDate ? `${dueDate.slice(8,10)}/${dueDate.slice(5,7)}/${dueDate.slice(0,4)}` : ''}
+                  className="w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none border-gray-200" />
+                <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+              </div>
             </div>
 
             <div className="space-y-1.5 col-span-2">
@@ -205,12 +211,13 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
             {isRecurring && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">End date (optional)</span>
-                <Input
-                  type="date"
-                  value={recurrenceEndDate}
-                  onChange={e => setRecurrenceEndDate(e.target.value)}
-                  className="h-7 text-xs w-36"
-                />
+                <div className="relative w-36">
+                  <input type="text" readOnly placeholder="dd/mm/yyyy"
+                    value={recurrenceEndDate ? `${recurrenceEndDate.slice(8,10)}/${recurrenceEndDate.slice(5,7)}/${recurrenceEndDate.slice(0,4)}` : ''}
+                    className="h-7 text-xs w-36 px-2 border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none" />
+                  <input type="date" value={recurrenceEndDate} onChange={e => setRecurrenceEndDate(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+                </div>
               </div>
             )}
           </div>

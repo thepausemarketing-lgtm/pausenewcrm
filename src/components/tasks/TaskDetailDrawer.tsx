@@ -294,7 +294,14 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
             </div>
             <div className="space-y-1.5">
               <Label>Due Date</Label>
-              <Input type="date" value={task.due_date ?? ''} onChange={e => setTask({ ...task, due_date: e.target.value || null })} />
+              <div className="relative">
+                <input type="text" readOnly placeholder="dd/mm/yyyy"
+                  value={task.due_date ? `${task.due_date.slice(8,10)}/${task.due_date.slice(5,7)}/${task.due_date.slice(0,4)}` : ''}
+                  className="w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none" />
+                <input type="date" value={task.due_date ?? ''}
+                  onChange={e => setTask({ ...task, due_date: e.target.value || null })}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+              </div>
             </div>
             <div className="space-y-1.5 col-span-2">
               <Label>Client</Label>
@@ -392,9 +399,14 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
             {isRecurring && (
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">End date (optional)</span>
-                <Input type="date" value={task.recurrence_end_date ?? ''}
-                  onChange={e => setTask({ ...task, recurrence_end_date: e.target.value || null })}
-                  className="h-7 text-xs w-36" />
+                <div className="relative w-36">
+                  <input type="text" readOnly placeholder="dd/mm/yyyy"
+                    value={task.recurrence_end_date ? `${task.recurrence_end_date.slice(8,10)}/${task.recurrence_end_date.slice(5,7)}/${task.recurrence_end_date.slice(0,4)}` : ''}
+                    className="h-7 text-xs w-36 px-2 border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none" />
+                  <input type="date" value={task.recurrence_end_date ?? ''}
+                    onChange={e => setTask({ ...task, recurrence_end_date: e.target.value || null })}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+                </div>
               </div>
             )}
             {isRecurring && (

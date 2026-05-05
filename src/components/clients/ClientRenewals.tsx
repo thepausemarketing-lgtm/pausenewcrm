@@ -230,8 +230,14 @@ export default function ClientRenewals({ renewals: initial, clientId, clientCurr
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Renewal Date *</Label>
-              <Input type="date" value={form.renewal_date}
-                onChange={e => setForm(f => ({ ...f, renewal_date: e.target.value }))} />
+              <div className="relative">
+                <input type="text" readOnly placeholder="dd/mm/yyyy"
+                  value={form.renewal_date ? `${form.renewal_date.slice(8,10)}/${form.renewal_date.slice(5,7)}/${form.renewal_date.slice(0,4)}` : ''}
+                  className="w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none" />
+                <input type="date" value={form.renewal_date}
+                  onChange={e => setForm(f => ({ ...f, renewal_date: e.target.value }))}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+              </div>
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Cost</Label>
@@ -330,8 +336,14 @@ export default function ClientRenewals({ renewals: initial, clientId, clientCurr
                             className="h-7 px-2 text-xs border border-gray-200 rounded-md bg-white">
                             {BILLING_CYCLES.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
                           </select>
-                          <Input className="h-7 text-xs" type="date" value={editForm.renewal_date}
-                            onChange={e => setEditForm(f => ({ ...f, renewal_date: e.target.value }))} />
+                          <div className="relative w-32">
+                            <input type="text" readOnly placeholder="dd/mm/yyyy"
+                              value={editForm.renewal_date ? `${editForm.renewal_date.slice(8,10)}/${editForm.renewal_date.slice(5,7)}/${editForm.renewal_date.slice(0,4)}` : ''}
+                              className="h-7 text-xs w-32 px-2 border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none" />
+                            <input type="date" value={editForm.renewal_date}
+                              onChange={e => setEditForm(f => ({ ...f, renewal_date: e.target.value }))}
+                              className="absolute inset-0 opacity-0 cursor-pointer w-full" />
+                          </div>
                           <select value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
                             className="h-7 px-2 text-xs border border-gray-200 rounded-md bg-white">
                             <option value="active">Active</option>
