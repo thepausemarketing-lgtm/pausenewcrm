@@ -158,14 +158,16 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
               <Label>Client</Label>
               <select value={clientId} onChange={e => setClientId(e.target.value)} className={sel}>
                 <option value="">No client (optional)</option>
-                {clients.filter(c => !c.parent_client_id).map(parent => (
-                  <optgroup key={parent.id} label={parent.name}>
-                    <option value={parent.id}>{parent.name}</option>
-                    {clients.filter(c => c.parent_client_id === parent.id).map(sub => (
-                      <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
+                {clients.filter(c => !c.parent_client_id).map(parent => {
+                  const subs = clients.filter(c => c.parent_client_id === parent.id)
+                  if (subs.length === 0) return <option key={parent.id} value={parent.id}>{parent.name}</option>
+                  return (
+                    <optgroup key={parent.id} label={parent.name}>
+                      <option value={parent.id}>{parent.name} (main)</option>
+                      {subs.map(sub => <option key={sub.id} value={sub.id}>↳ {sub.name}</option>)}
+                    </optgroup>
+                  )
+                })}
               </select>
             </div>
           </div>

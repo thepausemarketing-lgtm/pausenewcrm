@@ -181,16 +181,18 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
               className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400"
             >
               <option value="">Select client…</option>
-              {/* Parent clients */}
-              {clients.filter(c => !c.parent_client_id).map(parent => (
-                <optgroup key={parent.id} label={parent.name}>
-                  <option value={parent.id}>{parent.name}</option>
-                  {clients.filter(c => c.parent_client_id === parent.id).map(sub => (
-                    <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-              {/* Clients with no parent that aren't parents themselves — already covered above */}
+              {clients.filter(c => !c.parent_client_id).map(parent => {
+                const subs = clients.filter(c => c.parent_client_id === parent.id)
+                if (subs.length === 0) return <option key={parent.id} value={parent.id}>{parent.name}</option>
+                return (
+                  <optgroup key={parent.id} label={parent.name}>
+                    <option value={parent.id}>{parent.name} (main)</option>
+                    {subs.map(sub => (
+                      <option key={sub.id} value={sub.id}>↳ {sub.name}</option>
+                    ))}
+                  </optgroup>
+                )
+              })}
             </select>
           </div>
 
