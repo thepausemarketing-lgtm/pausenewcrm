@@ -230,8 +230,9 @@ export default function CalendarView({ items: initialItems, clients, year, month
   const visibleColDefs = ALL_COLUMNS.filter(c => c.always || visibleCols.has(c.key))
 
   // Date-filtered items for list view
+  // Convert publish_at (UTC) to local date string for comparison with today/tomorrow
   const getPublishDate = (item: ItemWithRelations) =>
-    item.publish_at ? item.publish_at.slice(0, 10) : null
+    item.publish_at ? toLocalDate(new Date(item.publish_at)) : null
 
   const listItems = useMemo(() => {
     let filtered: ItemWithRelations[]

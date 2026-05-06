@@ -94,7 +94,13 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
   const [caption, setCaption] = useState(item?.caption ?? '')
   const [publishAt, setPublishAt] = useState(
     item?.publish_at
-      ? new Date(item.publish_at).toISOString().slice(0, 16)
+      ? (() => {
+          const d = new Date(item.publish_at)
+          // Use local time components so the datetime-local input shows the
+          // correct local date/time (toISOString() returns UTC which would
+          // cause a timezone shift on save)
+          return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+        })()
       : defaultDate ? `${defaultDate}T09:00` : ''
   )
   const [clientId, setClientId] = useState(
