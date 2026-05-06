@@ -9,7 +9,7 @@ import {
 } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download, Pencil, LayoutGrid } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { PLATFORMS, CONTENT_STATUSES } from '@/lib/constants'
+import { PLATFORMS, CONTENT_STATUSES, CONTENT_TYPES } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 import ContentItemDrawer from './ContentItemDrawer'
 
@@ -30,6 +30,7 @@ interface Props {
 const ALL_COLUMNS = [
   { key: 'title',           label: 'Title',            always: true },
   { key: 'client',          label: 'Client',           always: false },
+  { key: 'content_type',    label: 'Type',             always: false },
   { key: 'platform',        label: 'Platform',         always: false },
   { key: 'design_date',     label: 'Design Date',      always: false },
   { key: 'assignee',        label: 'Assignee',         always: false },
@@ -40,8 +41,8 @@ const ALL_COLUMNS = [
   { key: 'overall_status',  label: 'Overall Status',   always: false },
 ]
 
-const DEFAULT_VISIBLE = new Set(['title', 'client', 'platform', 'publish_date', 'overall_status'])
-const STORAGE_KEY = 'calendar_visible_cols'
+const DEFAULT_VISIBLE = new Set(['title', 'client', 'content_type', 'platform', 'design_date', 'publish_date', 'overall_status'])
+const STORAGE_KEY = 'calendar_visible_cols_v2'
 
 function getOverallStatus(item: ItemWithRelations): { label: string; color: string } {
   const liveLinks = item.live_links ?? {}
@@ -205,6 +206,7 @@ export default function CalendarView({ items: initialItems, clients, year, month
         switch (col.key) {
           case 'title':           return item.title
           case 'client':          return item.client?.name ?? ''
+          case 'content_type':    return CONTENT_TYPES.find(t => t.value === item.content_type)?.label ?? item.content_type ?? ''
           case 'platform':        return item.platforms?.join(', ') ?? platform?.label ?? ''
           case 'design_date':     return item.design_date ?? ''
           case 'assignee':        return item.assignee?.full_name ?? ''
@@ -432,6 +434,15 @@ export default function CalendarView({ items: initialItems, clients, year, month
                     ) : null}
                     {visibleCols.has('client') && (
                       <td className="px-4 py-3 text-gray-500">{item.client?.name ?? '—'}</td>
+                    )}
+                    {visibleCols.has('content_type') && (
+                      <td className="px-4 py-3">
+                        {item.content_type ? (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+                            {CONTENT_TYPES.find(t => t.value === item.content_type)?.label ?? item.content_type}
+                          </span>
+                        ) : '—'}
+                      </td>
                     )}
                     {visibleCols.has('platform') && (
                       <td className="px-4 py-3">
