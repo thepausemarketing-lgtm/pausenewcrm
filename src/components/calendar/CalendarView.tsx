@@ -191,6 +191,11 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
     setCreateDate(null)
   }
 
+  const handleItemDeleted = (id: string) => {
+    setItems(prev => prev.filter(i => i.id !== id))
+    setSelectedItem(null)
+  }
+
   const toggleCol = (key: string) => {
     setVisibleCols(prev => {
       const next = new Set(prev)
@@ -598,6 +603,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
           canApprove={canApprove}
           onClose={() => setSelectedItem(null)}
           onUpdate={handleItemUpdated}
+          onDelete={handleItemDeleted}
         />
       )}
 

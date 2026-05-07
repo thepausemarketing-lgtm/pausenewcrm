@@ -11,6 +11,7 @@ import { PLATFORMS, CONTENT_TYPES, CONTENT_STATUSES } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 import { useRole } from '@/context/RoleContext'
 import { formatDateTime } from '@/lib/utils'
+import { Trash2 } from 'lucide-react'
 
 type ContentAssigneeRef = {
   user_id: string
@@ -61,6 +62,7 @@ interface Props {
   onClose: () => void
   onUpdate?: (item: ItemWithRelations) => void
   onCreate?: (item: ItemWithRelations) => void
+  onDelete?: (id: string) => void
 }
 
 function getOverallStatus(
@@ -80,7 +82,7 @@ function getOverallStatus(
   return { label: '🕐 Not Started', color: '#6b7280' }
 }
 
-export default function ContentItemDrawer({ item, defaultDate, clients, canApprove, onClose, onUpdate, onCreate }: Props) {
+export default function ContentItemDrawer({ item, defaultDate, clients, canApprove, onClose, onUpdate, onCreate, onDelete }: Props) {
   const { profile } = useRole()
   const supabase = createClient()
   const isNew = !item
@@ -124,6 +126,15 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!item || !onDelete) return
+    if (!confirm(`Delete "${item.title}"? This cannot be undone.`)) return
+    setDeleting(true)
+    await supabase.from('content_items').delete().eq('id', item.id)
+    onDelete(item.id)
+  }
 
   useEffect(() => {
     createClient()
@@ -240,7 +251,19 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
     <Sheet open onOpenChange={v => !v && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="px-6 pt-6 pb-4">
-          <SheetTitle>{isNew ? 'New Content Item' : 'Edit Content Item'}</SheetTitle>
+          <div className="flex items-center justify-between">
+            <SheetTitle>{isNew ? 'New Content Item' : 'Edit Content Item'}</SheetTitle>
+            {!isNew && onDelete && (
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                title="Delete content item"
+              >
+                <Trash2 size={15} />
+              </button>
+            )}
+          </div>
         </SheetHeader>
 
         <div className="px-6 pb-6 space-y-4">
