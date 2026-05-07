@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { redirect } from 'next/navigation'
 import TeamManagement from '@/components/settings/TeamManagement'
 import type { Designation } from '@/types/database.types'
@@ -11,6 +12,17 @@ export default async function TeamSettingsPage() {
   const { data: rawMyProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   const myProfile = rawMyProfile as { role: string } | null
   if (myProfile?.role !== 'admin') redirect('/app/settings/profile')
+
+  // Use service role to fetch auth user emails
+  const adminClient = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+  const { data: authUsersData } = await adminClient.auth.admin.listUsers({ perPage: 200 })
+  const emailMap: Record<string, string> = {}
+  for (const u of authUsersData?.users ?? []) {
+    if (u.email) emailMap[u.id] = u.email
+  }
 
   const [{ data: profiles }, { data: rawDesignations }] = await Promise.all([
     supabase.from('profiles').select('*').order('full_name'),
@@ -25,6 +37,7 @@ export default async function TeamSettingsPage() {
         profiles={profiles ?? []}
         designations={(rawDesignations ?? []) as Designation[]}
         currentUserId={user.id}
+        emailMap={emailMap}
       />
     </div>
   )

@@ -28,9 +28,10 @@ interface Props {
   profiles: ProfileWithDesignation[]
   designations: Designation[]
   currentUserId: string
+  emailMap?: Record<string, string>
 }
 
-export default function TeamManagement({ profiles: initialProfiles, designations, currentUserId }: Props) {
+export default function TeamManagement({ profiles: initialProfiles, designations, currentUserId, emailMap = {} }: Props) {
   const [profiles, setProfiles] = useState(initialProfiles)
   const [createMode, setCreateMode] = useState<'invite' | 'create'>('invite')
   const [inviteEmail, setInviteEmail] = useState('')
@@ -157,6 +158,9 @@ export default function TeamManagement({ profiles: initialProfiles, designations
                 <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-full shrink-0">{desig.name}</span>
               )}
             </div>
+            {emailMap[profile.id] && (
+              <p className="text-xs text-gray-400 mt-0.5">{emailMap[profile.id]}</p>
+            )}
             {reportsToProfile && (
               <p className="text-xs text-gray-400 mt-0.5">
                 Reports to <span className="text-gray-600 font-medium">{reportsToProfile.full_name}</span>
