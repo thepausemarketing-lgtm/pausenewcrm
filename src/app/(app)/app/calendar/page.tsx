@@ -1,13 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVisibleUserIds } from '@/lib/supabase/helpers'
 import CalendarView from '@/components/calendar/CalendarView'
-import PageHeader from '@/components/shared/PageHeader'
 import type { Platform, ContentStatus } from '@/types/database.types'
 
 export default async function CalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; year?: string; client?: string; platform?: string; status?: string }>
+  searchParams: Promise<{ month?: string; year?: string; client?: string; platform?: string; status?: string; assignee?: string }>
 }) {
   const params = await searchParams
   const supabase = await createClient()
@@ -27,7 +26,7 @@ export default async function CalendarPage({
   // Hierarchy-based visibility
   const visibleIds = await getVisibleUserIds(supabase, user.id)
 
-  // Get content_item IDs where a visible user is in content_assignees (multi-assignee)
+  // Get content_item IDs where a visible user is in content_assignees
   let coContentIds: string[] = []
   if (visibleIds !== null) {
     const { data: coAssigned } = await (supabase as any)
@@ -37,30 +36,51 @@ export default async function CalendarPage({
     coContentIds = (coAssigned ?? []).map((r: any) => r.content_item_id)
   }
 
-  let query = (supabase as any)
+  const buildVisibilityFilter = (q: any) => {
+    if (visibleIds === null) return q
+    const orParts: string[] = [
+      `assigned_to.in.(${visibleIds.join(',')})`,
+      `assigned_to.is.null`,
+      ...(coContentIds.length > 0 ? [`id.in.(${coContentIds.join(',')})`] : []),
+    ]
+    return q.or(orParts.join(','))
+  }
+
+  // ── Month items (for Calendar + List views) ──
+  let monthQuery = (supabase as any)
     .from('content_items')
     .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
     .gte('publish_at', startOfMonth)
     .lte('publish_at', endOfMonth)
     .order('publish_at', { ascending: true })
 
-  // Apply hierarchy visibility filter
-  if (visibleIds !== null) {
-    const orParts: string[] = [
-      `assigned_to.in.(${visibleIds.join(',')})`,
-      `assigned_to.is.null`, // unassigned items are visible to all
-      ...(coContentIds.length > 0 ? [`id.in.(${coContentIds.join(',')})`] : []),
-    ]
-    query = query.or(orParts.join(','))
-  }
+  monthQuery = buildVisibilityFilter(monthQuery)
+  if (params.client)   monthQuery = monthQuery.eq('client_id', params.client)
+  if (params.platform) monthQuery = monthQuery.eq('platform', params.platform as Platform)
+  if (params.status)   monthQuery = monthQuery.eq('status', params.status as ContentStatus)
+  if (params.assignee) monthQuery = monthQuery.eq('assigned_to', params.assignee)
 
-  if (params.client) query = query.eq('client_id', params.client)
-  if (params.platform) query = query.eq('platform', params.platform as Platform)
-  if (params.status) query = query.eq('status', params.status as ContentStatus)
+  // ── Board items (all non-cancelled, no date filter) ──
+  let boardQuery = (supabase as any)
+    .from('content_items')
+    .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name,avatar_url)')
+    .not('status', 'eq', 'cancelled')
+    .order('created_at', { ascending: false })
 
-  const [{ data: rawItems }, { data: rawClients }] = await Promise.all([
-    query,
+  boardQuery = buildVisibilityFilter(boardQuery)
+  if (params.client)   boardQuery = boardQuery.eq('client_id', params.client)
+  if (params.assignee) boardQuery = boardQuery.eq('assigned_to', params.assignee)
+
+  const [
+    { data: rawItems },
+    { data: rawBoardItems },
+    { data: rawClients },
+    { data: rawProfiles },
+  ] = await Promise.all([
+    monthQuery,
+    boardQuery,
     supabase.from('clients').select('id,name,parent_client_id').not('status', 'eq', 'churned').order('name'),
+    supabase.from('profiles').select('id,full_name').eq('is_active', true).order('full_name'),
   ])
 
   return (
@@ -68,11 +88,14 @@ export default async function CalendarPage({
       <div className="max-w-7xl mx-auto">
         <CalendarView
           items={(rawItems ?? []) as Parameters<typeof CalendarView>[0]['items']}
+          boardItems={(rawBoardItems ?? []) as any[]}
           clients={(rawClients ?? []) as { id: string; name: string; parent_client_id?: string | null }[]}
+          profiles={(rawProfiles ?? []) as { id: string; full_name: string }[]}
           year={year}
           month={month}
           canApprove={profile?.role === 'admin' || profile?.role === 'manager'}
-          filters={{ client: params.client, platform: params.platform, status: params.status }}
+          currentUserId={user.id}
+          filters={{ client: params.client, platform: params.platform, status: params.status, assignee: params.assignee }}
         />
       </div>
     </div>

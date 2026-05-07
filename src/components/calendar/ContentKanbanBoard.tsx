@@ -6,13 +6,12 @@ import {
   PointerSensor, useSensor, useSensors, useDroppable,
 } from '@dnd-kit/core'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, List } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PLATFORMS } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 import ContentKanbanCard from './ContentKanbanCard'
 import ContentItemDrawer from './ContentItemDrawer'
-import Link from 'next/link'
 
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
@@ -167,13 +166,7 @@ export default function ContentKanbanBoard({ initialItems, clients, canApprove, 
     <div className="flex flex-col h-full">
       {/* Toolbar */}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <div className="flex items-center gap-2">
-          <Link href="/app/calendar">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <List size={14} /> List / Calendar
-            </Button>
-          </Link>
-        </div>
+        <div className="flex items-center gap-2" />
         <select
           value={clientFilter}
           onChange={e => setClientFilter(e.target.value)}

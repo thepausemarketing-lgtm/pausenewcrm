@@ -2,16 +2,16 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   getDay, isToday, parseISO,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download, Pencil, LayoutGrid } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { PLATFORMS, CONTENT_STATUSES, CONTENT_TYPES } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 import ContentItemDrawer from './ContentItemDrawer'
+import ContentKanbanBoard from './ContentKanbanBoard'
 
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
@@ -20,11 +20,14 @@ type ItemWithRelations = ContentItem & {
 
 interface Props {
   items: ItemWithRelations[]
+  boardItems: any[]
   clients: { id: string; name: string; parent_client_id?: string | null }[]
+  profiles: { id: string; full_name: string }[]
   year: number
   month: number
   canApprove: boolean
-  filters: { client?: string; platform?: string; status?: string }
+  currentUserId: string
+  filters: { client?: string; platform?: string; status?: string; assignee?: string }
 }
 
 const ALL_COLUMNS = [
@@ -105,7 +108,7 @@ const DATE_TABS: { key: DateFilter; label: string; icon: React.ElementType }[] =
   { key: 'custom',   label: 'Custom',   icon: Clock },
 ]
 
-export default function CalendarView({ items: initialItems, clients, year, month, canApprove, filters }: Props) {
+export default function CalendarView({ items: initialItems, boardItems, clients, profiles, year, month, canApprove, currentUserId, filters }: Props) {
   const router = useRouter()
   const [items, setItems] = useState(initialItems)
 
@@ -115,7 +118,7 @@ export default function CalendarView({ items: initialItems, clients, year, month
   }, [initialItems])
   const [selectedItem, setSelectedItem] = useState<ItemWithRelations | null>(null)
   const [createDate, setCreateDate] = useState<string | null>(null)
-  const [view, setView] = useState<'calendar' | 'list'>('calendar')
+  const [view, setView] = useState<'list' | 'board' | 'calendar'>('list')
   const [visibleCols, setVisibleCols] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return DEFAULT_VISIBLE
     try {
@@ -152,9 +155,10 @@ export default function CalendarView({ items: initialItems, clients, year, month
     const q = new URLSearchParams({
       year: String(d.getFullYear()),
       month: String(d.getMonth() + 1),
-      ...(filters.client ? { client: filters.client } : {}),
+      ...(filters.client   ? { client:   filters.client }   : {}),
       ...(filters.platform ? { platform: filters.platform } : {}),
-      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.status   ? { status:   filters.status }   : {}),
+      ...(filters.assignee ? { assignee: filters.assignee } : {}),
     })
     router.push(`/app/calendar?${q}`)
   }
@@ -162,9 +166,10 @@ export default function CalendarView({ items: initialItems, clients, year, month
   const filterNav = (key: string, value: string) => {
     const q = new URLSearchParams({
       year: String(year), month: String(month),
-      ...(filters.client ? { client: filters.client } : {}),
+      ...(filters.client   ? { client:   filters.client }   : {}),
       ...(filters.platform ? { platform: filters.platform } : {}),
-      ...(filters.status ? { status: filters.status } : {}),
+      ...(filters.status   ? { status:   filters.status }   : {}),
+      ...(filters.assignee ? { assignee: filters.assignee } : {}),
       ...(value ? { [key]: value } : {}),
     })
     if (!value) q.delete(key)
@@ -282,24 +287,16 @@ export default function CalendarView({ items: initialItems, clients, year, month
         </div>
 
         <div className="flex items-center gap-2">
-          {/* View Toggle */}
+          {/* View Toggle — List | Board | Calendar */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-            <button
-              onClick={() => setView('calendar')}
-              className={view === 'calendar'
-                ? 'px-3 py-1 text-xs font-medium bg-white rounded-md shadow-sm text-gray-900'
-                : 'px-3 py-1 text-xs text-gray-500 hover:text-gray-700'}
-            >
-              Calendar
-            </button>
-            <button
-              onClick={() => setView('list')}
-              className={view === 'list'
-                ? 'px-3 py-1 text-xs font-medium bg-white rounded-md shadow-sm text-gray-900'
-                : 'px-3 py-1 text-xs text-gray-500 hover:text-gray-700'}
-            >
-              List
-            </button>
+            {(['list', 'board', 'calendar'] as const).map(v => (
+              <button key={v} onClick={() => setView(v)}
+                className={view === v
+                  ? 'px-3 py-1 text-xs font-medium bg-white rounded-md shadow-sm text-gray-900 capitalize'
+                  : 'px-3 py-1 text-xs text-gray-500 hover:text-gray-700 capitalize'}>
+                {v}
+              </button>
+            ))}
           </div>
 
           {/* Column picker + CSV — only in list view */}
@@ -354,12 +351,12 @@ export default function CalendarView({ items: initialItems, clients, year, month
             <option value="">All statuses</option>
             {CONTENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
+          <select value={filters.assignee ?? ''} onChange={e => filterNav('assignee', e.target.value)}
+            className="h-8 px-2 text-xs rounded-lg border border-gray-200 bg-white">
+            <option value="">All assignees</option>
+            {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+          </select>
 
-          <Link href="/app/calendar/board">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <LayoutGrid size={13} /> Board
-            </Button>
-          </Link>
           <Button size="sm" className="gap-1.5" onClick={() => setCreateDate(format(new Date(), 'yyyy-MM-dd'))}>
             <Plus size={13} /> New Content
           </Button>
@@ -518,6 +515,16 @@ export default function CalendarView({ items: initialItems, clients, year, month
           </table>
         </div>
         </>
+      )}
+
+      {/* ── BOARD VIEW ── */}
+      {view === 'board' && (
+        <ContentKanbanBoard
+          initialItems={boardItems}
+          clients={clients}
+          canApprove={canApprove}
+          currentUserId={currentUserId}
+        />
       )}
 
       {/* ── CALENDAR GRID VIEW ── */}
