@@ -93,6 +93,19 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
       await supabase.from('activity_logs').insert({
         actor_id: currentUserId, action: 'created_task', entity_type: 'task', entity_id: task.id,
       })
+      // Telegram notification — fire-and-forget, don't await
+      const notifyIds = selectedAssignees.filter(id => id !== currentUserId)
+      if (notifyIds.length > 0) {
+        const assigner = profiles.find(p => p.id === currentUserId)
+        fetch('/api/telegram-notify', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userIds: notifyIds,
+            message: `📋 <b>New Task Assigned</b>\n\n<b>${task.title}</b>${task.due_date ? `\n📅 Due: ${new Date(task.due_date).toLocaleDateString('en-GB')}` : ''}\n\nAssigned by ${assigner?.full_name ?? 'someone'} on Pause CRM.`,
+          }),
+        })
+      }
       onCreated(task as TaskWithRelations)
     }
     setLoading(false)

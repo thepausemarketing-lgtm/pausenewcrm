@@ -33,6 +33,7 @@ export interface Database {
           is_active: boolean
           designation_id: string | null
           reports_to: string | null
+          telegram_chat_id: string | null
           created_at: string
           updated_at: string
         }
@@ -45,6 +46,7 @@ export interface Database {
           is_active?: boolean
           designation_id?: string | null
           reports_to?: string | null
+          telegram_chat_id?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -56,6 +58,7 @@ export interface Database {
           is_active?: boolean
           designation_id?: string | null
           reports_to?: string | null
+          telegram_chat_id?: string | null
           updated_at?: string
         }
         Relationships: []

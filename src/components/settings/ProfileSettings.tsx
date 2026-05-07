@@ -19,6 +19,7 @@ const TIMEZONES = [
 export default function ProfileSettings({ profile, email }: { profile: Profile; email: string }) {
   const [fullName, setFullName] = useState(profile.full_name)
   const [timezone, setTimezone] = useState(profile.timezone)
+  const [telegramChatId, setTelegramChatId] = useState(profile.telegram_chat_id ?? '')
   const [newPassword, setNewPassword] = useState('')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -27,7 +28,10 @@ export default function ProfileSettings({ profile, email }: { profile: Profile; 
 
   const handleSave = async () => {
     setError(null)
-    const { error } = await supabase.from('profiles').update({ full_name: fullName, timezone }).eq('id', profile.id)
+    const { error } = await supabase
+      .from('profiles')
+      .update({ full_name: fullName, timezone, telegram_chat_id: telegramChatId || null })
+      .eq('id', profile.id)
     if (error) { setError(error.message); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -77,6 +81,34 @@ export default function ProfileSettings({ profile, email }: { profile: Profile; 
               {TIMEZONES.map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      {/* Telegram */}
+      <div className="border-t border-gray-100 pt-5 space-y-3">
+        <div>
+          <h4 className="text-sm font-semibold text-gray-900">Telegram Notifications</h4>
+          <p className="text-xs text-gray-400 mt-0.5">
+            Get notified on Telegram when a task or content is assigned to you.
+          </p>
+        </div>
+        <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-xs text-blue-700 space-y-1">
+          <p className="font-medium">How to find your Chat ID:</p>
+          <ol className="list-decimal list-inside space-y-0.5">
+            <li>Open Telegram and search for <strong>@userinfobot</strong></li>
+            <li>Send it any message (e.g. "hi")</li>
+            <li>It will reply with your <strong>Id:</strong> number</li>
+            <li>Paste that number below</li>
+          </ol>
+          <p className="mt-1">Also make sure you&apos;ve started a chat with the Pause CRM bot first — otherwise Telegram won&apos;t deliver messages.</p>
+        </div>
+        <div className="space-y-1.5 max-w-xs">
+          <Label>Your Telegram Chat ID</Label>
+          <Input
+            value={telegramChatId}
+            onChange={e => setTelegramChatId(e.target.value)}
+            placeholder="e.g. 123456789"
+          />
         </div>
       </div>
 

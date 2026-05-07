@@ -194,6 +194,19 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
         await supabase.from('activity_logs').insert({
           actor_id: profile.id, action: 'created_content', entity_type: 'content_item', entity_id: data.id,
         })
+        // Telegram notification — fire-and-forget
+        const notifyIds = selectedAssignees.filter(id => id !== profile.id)
+        if (notifyIds.length > 0) {
+          const publishDate = publishAt ? new Date(publishAt).toLocaleDateString('en-GB') : null
+          fetch('/api/telegram-notify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userIds: notifyIds,
+              message: `🗓 <b>Content Assigned to You</b>\n\n<b>${data.title}</b>${publishDate ? `\n📅 Publish: ${publishDate}` : ''}${data.client ? `\n👤 Client: ${(data.client as any).name}` : ''}\n\nAssigned by ${profile.full_name ?? 'someone'} on Pause CRM.`,
+            }),
+          })
+        }
         if (onCreate) onCreate({ ...data, content_assignees: [] })
       }
     } else {
