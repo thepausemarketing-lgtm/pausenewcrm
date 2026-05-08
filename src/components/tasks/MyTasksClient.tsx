@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, CheckCircle2, X, Trash2 } from 'lucide-react'
+import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, CheckCircle2, X, Trash2, CornerDownLeft } from 'lucide-react'
 import InlineTaskRow from './InlineTaskRow'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -54,6 +54,8 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [quickAddTitle, setQuickAddTitle] = useState('')
+  const [quickAddActive, setQuickAddActive] = useState(false)
 
   const today = toDateStr(new Date())
   const tomorrow = toDateStr(new Date(Date.now() + 86400000))
@@ -113,6 +115,23 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
     await Promise.all(ids.map(id =>
       fetch(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }) })
     ))
+  }
+
+  const handleQuickAdd = async () => {
+    const title = quickAddTitle.trim()
+    if (!title) { setQuickAddActive(false); return }
+    setQuickAddTitle('')
+    setQuickAddActive(false)
+    const res = await fetch('/api/tasks', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, assigned_to: currentUserId }),
+    })
+    if (res.ok) {
+      const task = await res.json()
+      setTasks(prev => [...prev, task])
+      toast.success('Task created')
+    }
   }
 
   const saveInlineEdit = async (id: string) => {
@@ -282,11 +301,10 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
                     onChange={e => setSelectedIds(e.target.checked ? new Set(filtered.map(t => t.id)) : new Set())}
                   />
                 </th>
-                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Task</th>
-                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Status</th>
-                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Priority</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Task</th>
+                <th className="px-2 py-2.5 w-10" />
                 <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Due</th>
-                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Assignees</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Assignee</th>
                 <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Client</th>
               </tr>
             </thead>
@@ -307,6 +325,35 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
                   today={today}
                 />
               ))}
+              {/* Quick-add row */}
+              <tr className="border-t border-gray-100">
+                <td className="pl-4 pr-1 py-2.5 w-8" />
+                <td colSpan={4} className="px-2 py-2">
+                  {quickAddActive ? (
+                    <div className="flex items-center gap-2">
+                      <span className="w-3 h-3 rounded-full bg-gray-300 shrink-0" />
+                      <input
+                        autoFocus
+                        value={quickAddTitle}
+                        onChange={e => setQuickAddTitle(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') { setQuickAddActive(false); setQuickAddTitle('') } }}
+                        onBlur={handleQuickAdd}
+                        placeholder="Task name…"
+                        className="flex-1 text-sm outline-none bg-transparent text-gray-900 placeholder-gray-400"
+                      />
+                      <span className="text-xs text-gray-400 flex items-center gap-0.5 shrink-0"><CornerDownLeft size={10} /> Enter</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setQuickAddActive(true)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <Plus size={13} /> Add task
+                    </button>
+                  )}
+                </td>
+                <td />
+              </tr>
             </tbody>
           </table>
         </div>

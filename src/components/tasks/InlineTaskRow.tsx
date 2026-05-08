@@ -1,14 +1,8 @@
 'use client'
 
-/**
- * Single table row with fully inline-editable fields.
- * Status, Priority, Due Date, Assignee all save on change — no drawer needed.
- * Double-click title to rename. Click row to open full detail drawer.
- */
-
 import { useState } from 'react'
 import Link from 'next/link'
-import { Repeat2 } from 'lucide-react'
+import { Repeat2, Flag } from 'lucide-react'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import AssigneeStack from '@/components/shared/AssigneeStack'
@@ -24,19 +18,19 @@ interface Props {
   today: string
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  todo:        'bg-gray-100 text-gray-600',
-  in_progress: 'bg-blue-50 text-blue-700',
-  in_review:   'bg-amber-50 text-amber-700',
-  done:        'bg-green-50 text-green-700',
-  cancelled:   'bg-red-50 text-red-600',
+const STATUS_DOT: Record<string, string> = {
+  todo:        'bg-gray-300',
+  in_progress: 'bg-blue-500',
+  in_review:   'bg-amber-400',
+  done:        'bg-green-500',
+  cancelled:   'bg-red-400',
 }
 
-const PRIORITY_COLORS: Record<string, string> = {
-  urgent: 'bg-red-50 text-red-700',
-  high:   'bg-orange-50 text-orange-700',
-  medium: 'bg-yellow-50 text-yellow-700',
-  low:    'bg-gray-100 text-gray-500',
+const PRIORITY_FLAG: Record<string, string> = {
+  urgent: 'text-red-500',
+  high:   'text-orange-400',
+  medium: 'text-yellow-400',
+  low:    'text-gray-300',
 }
 
 async function patchTask(id: string, patch: Record<string, unknown>) {
@@ -52,7 +46,6 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
   const [titleVal, setTitleVal] = useState(task.title)
 
   const isOverdue = task.due_date && task.due_date < today && !['done', 'cancelled'].includes(task.status)
-  const statusLabel = TASK_STATUSES.find(s => s.value === task.status)?.label ?? task.status
   const priorityLabel = TASK_PRIORITIES.find(p => p.value === task.priority)?.label ?? task.priority
 
   const saveTitle = async () => {
@@ -83,11 +76,10 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
   }
 
   return (
-    <tr
-      className={`group border-b border-gray-50 last:border-0 transition-colors ${selected ? 'bg-violet-50/40' : 'hover:bg-gray-50/60'}`}
-    >
+    <tr className={`group border-b border-gray-100 last:border-0 transition-colors ${selected ? 'bg-violet-50/40' : 'hover:bg-gray-50/50'}`}>
+
       {/* Checkbox */}
-      <td className="px-3 py-2.5 w-8" onClick={e => e.stopPropagation()}>
+      <td className="pl-4 pr-1 py-2.5 w-8" onClick={e => e.stopPropagation()}>
         <input
           type="checkbox"
           className="rounded border-gray-300 text-violet-600 focus:ring-violet-400"
@@ -96,76 +88,71 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
         />
       </td>
 
-      {/* Title */}
-      <td className="px-3 py-2.5 min-w-0" onClick={e => e.stopPropagation()}>
-        {editingTitle ? (
-          <input
-            autoFocus
-            value={titleVal}
-            onChange={e => setTitleVal(e.target.value)}
-            onBlur={saveTitle}
-            onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
-            className="text-sm font-medium text-gray-900 border-b-2 border-violet-400 outline-none bg-transparent w-full"
-          />
-        ) : (
-          <div>
-            <span
-              className="text-sm font-medium text-gray-900 hover:text-violet-700 cursor-pointer inline-flex items-center gap-1.5"
-              onClick={() => onOpenDrawer(task.id)}
-              onDoubleClick={() => { setEditingTitle(true); setTitleVal(task.title) }}
-              title="Click to open · Double-click to rename"
+      {/* Title — with status circle on the left */}
+      <td className="px-2 py-2.5 min-w-0" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center gap-2">
+          {/* Status circle */}
+          <div className="relative shrink-0" title="Change status">
+            <span className={`block w-3 h-3 rounded-full border-2 border-white ring-1 ring-gray-200 cursor-pointer transition-transform hover:scale-125 ${STATUS_DOT[task.status] ?? 'bg-gray-300'}`} />
+            <select
+              value={task.status}
+              onChange={e => handleStatusChange(e.target.value)}
+              className="absolute inset-0 opacity-0 cursor-pointer w-full"
             >
-              {task.title}
-              {task.recurrence_type && task.recurrence_type !== 'none' && (
-                <Repeat2 size={10} className="text-violet-400 shrink-0" />
-              )}
-            </span>
-            {task.description && (
-              <p className="text-xs text-gray-400 truncate max-w-xs mt-0.5">{task.description}</p>
-            )}
+              {TASK_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
           </div>
-        )}
-      </td>
 
-      {/* Status — inline select styled as badge */}
-      <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-        <div className="relative inline-block rounded-lg hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
-            {statusLabel}
-          </span>
-          <select
-            value={task.status}
-            onChange={e => handleStatusChange(e.target.value)}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full"
-            title="Change status"
-          >
-            {TASK_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
+          {/* Title text */}
+          {editingTitle ? (
+            <input
+              autoFocus
+              value={titleVal}
+              onChange={e => setTitleVal(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={e => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') setEditingTitle(false) }}
+              className="text-sm font-medium text-gray-900 border-b-2 border-violet-400 outline-none bg-transparent flex-1"
+            />
+          ) : (
+            <div className="min-w-0">
+              <span
+                className={`text-sm font-medium cursor-pointer inline-flex items-center gap-1.5 hover:text-violet-700 ${task.status === 'done' ? 'line-through text-gray-400' : 'text-gray-900'}`}
+                onClick={() => onOpenDrawer(task.id)}
+                onDoubleClick={() => { setEditingTitle(true); setTitleVal(task.title) }}
+                title="Click to open · Double-click to rename"
+              >
+                {task.title}
+                {task.recurrence_type && task.recurrence_type !== 'none' && (
+                  <Repeat2 size={10} className="text-violet-400 shrink-0" />
+                )}
+              </span>
+              {task.description && (
+                <p className="text-xs text-gray-400 truncate max-w-xs mt-0.5">{task.description}</p>
+              )}
+            </div>
+          )}
         </div>
       </td>
 
-      {/* Priority — inline select styled as badge */}
-      <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-        <div className="relative inline-block rounded-lg hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${PRIORITY_COLORS[task.priority] ?? 'bg-gray-100 text-gray-600'}`}>
-            {priorityLabel}
-          </span>
+      {/* Priority — flag icon only */}
+      <td className="px-2 py-2.5 w-10" onClick={e => e.stopPropagation()}>
+        <div className="relative inline-flex items-center justify-center w-7 h-7 rounded-md hover:bg-gray-100 transition-colors cursor-pointer" title={priorityLabel}>
+          <Flag size={13} className={PRIORITY_FLAG[task.priority] ?? 'text-gray-300'} fill="currentColor" />
           <select
             value={task.priority}
             onChange={e => handlePriorityChange(e.target.value)}
             className="absolute inset-0 opacity-0 cursor-pointer w-full"
-            title="Change priority"
           >
             {TASK_PRIORITIES.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
         </div>
       </td>
 
-      {/* Due Date — transparent date input over display text */}
+      {/* Due Date */}
       <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
         <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-          <span className={`text-sm ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-            {task.due_date ? formatDate(task.due_date) : <span className="text-gray-400">Set date</span>}
+          <span className={`text-xs ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+            {task.due_date ? formatDate(task.due_date) : <span className="text-gray-300">—</span>}
             {isOverdue && <span className="ml-1">⚠</span>}
           </span>
           <input
@@ -178,7 +165,7 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
         </div>
       </td>
 
-      {/* Assignee — inline select */}
+      {/* Assignee */}
       <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
         <div className="relative inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
           <AssigneeStack assignees={task.task_assignees ?? []} size="xs" />
