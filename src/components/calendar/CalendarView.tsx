@@ -6,7 +6,7 @@ import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   getDay, isToday,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download, SlidersHorizontal, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { PLATFORMS, CONTENT_STATUSES, CONTENT_TYPES } from '@/lib/constants'
@@ -99,6 +99,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
     } catch { return DEFAULT_VISIBLE }
   })
   const [colPickerOpen, setColPickerOpen] = useState(false)
+  const [filterOpen, setFilterOpen] = useState(false)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
@@ -259,24 +260,26 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
     custom:   dateFilter === 'custom' ? listItems.length : 0,
   }
 
+  const activeFilterCount = [filters.client, filters.platform, filters.status, filters.assignee].filter(Boolean).length
+
   return (
     <div className="flex flex-col">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between mb-4">
+      {/* ── Row 1: Navigation + View Toggle | Actions ── */}
+      <div className="flex items-center justify-between mb-3">
+        {/* Left: month nav + view toggle */}
         <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronLeft size={16} />
-          </button>
-          <h2 className="text-base font-semibold text-gray-900 min-w-[140px] text-center">
-            {format(currentDate, 'MMMM yyyy')}
-          </h2>
-          <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
-            <ChevronRight size={16} />
-          </button>
-        </div>
+          <div className="flex items-center gap-1">
+            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+              <ChevronLeft size={16} />
+            </button>
+            <h2 className="text-base font-semibold text-gray-900 min-w-[120px] text-center">
+              {format(currentDate, 'MMMM yyyy')}
+            </h2>
+            <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
+              <ChevronRight size={16} />
+            </button>
+          </div>
 
-        <div className="flex items-center gap-2">
-          {/* View Toggle — List | Board | Calendar */}
           <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
             {(['list', 'board', 'calendar'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
@@ -287,70 +290,101 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Column picker + CSV — only in list view */}
+        {/* Right: secondary actions + primary CTA */}
+        <div className="flex items-center gap-2">
+          {/* Filters toggle */}
+          <button
+            onClick={() => setFilterOpen(o => !o)}
+            className={`flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border transition-colors ${
+              filterOpen || activeFilterCount > 0
+                ? 'border-violet-300 bg-violet-50 text-violet-700'
+                : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <SlidersHorizontal size={13} />
+            Filters
+            {activeFilterCount > 0 && (
+              <span className="ml-0.5 w-4 h-4 rounded-full bg-violet-600 text-white text-[10px] font-semibold flex items-center justify-center leading-none">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+
           {view === 'list' && (
             <>
-            <button
-              onClick={downloadCSV}
-              className="flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-              title="Download CSV"
-            >
-              <Download size={13} /> Export
-            </button>
-            <div className="relative" ref={colPickerRef}>
               <button
-                onClick={() => setColPickerOpen(o => !o)}
+                onClick={downloadCSV}
                 className="flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
               >
-                <Columns size={13} /> Columns
+                <Download size={13} /> Export
               </button>
-              {colPickerOpen && (
-                <div className="absolute right-0 top-10 z-50 w-48 bg-white rounded-xl border border-gray-200 shadow-lg p-2">
-                  {ALL_COLUMNS.filter(c => !c.always).map(col => (
-                    <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
-                      <input
-                        type="checkbox"
-                        checked={visibleCols.has(col.key)}
-                        onChange={() => toggleCol(col.key)}
-                        className="accent-violet-600"
-                      />
-                      {col.label}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
+              <div className="relative" ref={colPickerRef}>
+                <button
+                  onClick={() => setColPickerOpen(o => !o)}
+                  className="flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
+                >
+                  <Columns size={13} /> Columns
+                </button>
+                {colPickerOpen && (
+                  <div className="absolute right-0 top-10 z-50 w-48 bg-white rounded-xl border border-gray-200 shadow-lg p-2">
+                    {ALL_COLUMNS.filter(c => !c.always).map(col => (
+                      <label key={col.key} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={visibleCols.has(col.key)}
+                          onChange={() => toggleCol(col.key)}
+                          className="accent-violet-600"
+                        />
+                        {col.label}
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
             </>
           )}
-
-          {/* Filters */}
-          <select value={filters.client ?? ''} onChange={e => filterNav('client', e.target.value)}
-            className="h-8 px-2 text-xs rounded-lg border border-gray-200 bg-white">
-            <option value="">All clients</option>
-            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-          <select value={filters.platform ?? ''} onChange={e => filterNav('platform', e.target.value)}
-            className="h-8 px-2 text-xs rounded-lg border border-gray-200 bg-white">
-            <option value="">All platforms</option>
-            {PLATFORMS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
-          <select value={filters.status ?? ''} onChange={e => filterNav('status', e.target.value)}
-            className="h-8 px-2 text-xs rounded-lg border border-gray-200 bg-white">
-            <option value="">All statuses</option>
-            {CONTENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <select value={filters.assignee ?? ''} onChange={e => filterNav('assignee', e.target.value)}
-            className="h-8 px-2 text-xs rounded-lg border border-gray-200 bg-white">
-            <option value="">All assignees</option>
-            {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-          </select>
 
           <Button size="sm" className="gap-1.5" onClick={() => setCreateDate(format(new Date(), 'yyyy-MM-dd'))}>
             <Plus size={13} /> New Content
           </Button>
         </div>
       </div>
+
+      {/* ── Row 2: Filter bar (collapsible) ── */}
+      {filterOpen && (
+        <div className="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex-wrap">
+          <select value={filters.client ?? ''} onChange={e => filterNav('client', e.target.value)}
+            className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
+            <option value="">All clients</option>
+            {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <select value={filters.platform ?? ''} onChange={e => filterNav('platform', e.target.value)}
+            className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
+            <option value="">All platforms</option>
+            {PLATFORMS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+          </select>
+          <select value={filters.status ?? ''} onChange={e => filterNav('status', e.target.value)}
+            className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
+            <option value="">All statuses</option>
+            {CONTENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <select value={filters.assignee ?? ''} onChange={e => filterNav('assignee', e.target.value)}
+            className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
+            <option value="">All assignees</option>
+            {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+          </select>
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => { filterNav('client', ''); filterNav('platform', ''); filterNav('status', ''); filterNav('assignee', '') }}
+              className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 ml-1"
+            >
+              <X size={11} /> Clear all
+            </button>
+          )}
+        </div>
+      )}
 
       {/* ── LIST VIEW ── */}
       {view === 'list' && (
