@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2 } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
@@ -49,6 +50,8 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [assigneeFilter, setAssigneeFilter] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
 
   const today = toDateStr(new Date())
   const tomorrow = toDateStr(new Date(Date.now() + 86400000))
@@ -56,16 +59,39 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
   const handleTaskCreated = (task: TaskWithAssignees) => {
     setTasks(prev => [task, ...prev])
     setNewTaskOpen(false)
+    toast.success('Task created')
   }
 
   const handleTaskUpdated = (updated: TaskWithAssignees) => {
     setTasks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
     setSelectedTaskId(null)
+    toast.success('Task updated')
   }
 
   const handleTaskDeleted = (id: string) => {
+    const deletedTask = tasks.find(t => t.id === id)
     setTasks(prev => prev.filter(t => t.id !== id))
     setSelectedTaskId(null)
+    toast('Task deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (deletedTask) setTasks(prev => [deletedTask, ...prev])
+        },
+      },
+      duration: 5000,
+    })
+  }
+
+  const saveInlineEdit = async (id: string) => {
+    if (!editingTitle.trim()) { setEditingId(null); return }
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, title: editingTitle } : t))
+    setEditingId(null)
+    await fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: editingTitle })
+    })
   }
 
   const dateFiltered = useMemo(() => {
@@ -191,25 +217,25 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
 
       {/* Task table */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 py-8">
+        <div className="py-8">
           <EmptyState
             icon={CalendarDays}
             title={
-              dateFilter === 'all' ? 'No tasks assigned to you' :
+              dateFilter === 'all' ? "You're all caught up" :
               dateFilter === 'today' ? 'Nothing due today' :
               dateFilter === 'tomorrow' ? 'Nothing due tomorrow' :
               dateFilter === 'overdue' ? 'No overdue tasks 🎉' :
               'No tasks in this date range'
             }
             description={
-              dateFilter === 'all' ? 'Create a task to get started' : 'Try a different filter'
+              dateFilter === 'all' ? 'No pending tasks — create one to get started' : 'Try a different filter'
+            }
+            action={
+              dateFilter === 'all' ? (
+                <Button size="sm" onClick={() => setNewTaskOpen(true)}>+ New Task</Button>
+              ) : undefined
             }
           />
-          {dateFilter === 'all' && (
-            <Button size="sm" className="gap-1.5" onClick={() => setNewTaskOpen(true)}>
-              <Plus size={14} /> New Task
-            </Button>
-          )}
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -231,15 +257,36 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
                 const isOverdue = task.due_date && task.due_date < today && !['done', 'cancelled'].includes(task.status)
                 return (
                   <tr key={task.id} className="hover:bg-gray-50 group cursor-pointer" onClick={() => setSelectedTaskId(task.id)}>
-                    <td className="px-4 py-3">
-                      <button className="font-medium text-gray-900 hover:text-violet-600 group-hover:text-violet-600 inline-flex items-center gap-1.5 text-left">
-                        {task.title}
-                        {task.recurrence_type && task.recurrence_type !== 'none' && (
-                          <Repeat2 size={11} className="text-violet-400 shrink-0" />
-                        )}
-                      </button>
-                      {task.description && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{task.description}</p>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      {editingId === task.id ? (
+                        <input
+                          autoFocus
+                          value={editingTitle}
+                          onChange={e => setEditingTitle(e.target.value)}
+                          onBlur={() => saveInlineEdit(task.id)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveInlineEdit(task.id)
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                          className="text-sm text-gray-800 border-b border-blue-400 outline-none bg-transparent w-full"
+                          onClick={e => e.stopPropagation()}
+                        />
+                      ) : (
+                        <div>
+                          <p
+                            className="font-medium text-gray-900 hover:text-violet-600 group-hover:text-violet-600 inline-flex items-center gap-1.5 text-left cursor-pointer"
+                            onDoubleClick={() => { setEditingId(task.id); setEditingTitle(task.title) }}
+                            onClick={() => setSelectedTaskId(task.id)}
+                          >
+                            {task.title}
+                            {task.recurrence_type && task.recurrence_type !== 'none' && (
+                              <Repeat2 size={11} className="text-violet-400 shrink-0" />
+                            )}
+                          </p>
+                          {task.description && (
+                            <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{task.description}</p>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3">

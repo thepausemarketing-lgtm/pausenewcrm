@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -106,7 +107,10 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
           }),
         })
       }
+      toast.success('Task created')
       onCreated(task as TaskWithRelations)
+    } else if (error) {
+      toast.error('Something went wrong')
     }
     setLoading(false)
   }

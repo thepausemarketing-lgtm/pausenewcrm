@@ -12,6 +12,7 @@ import type { ContentItem } from '@/types/database.types'
 import { useRole } from '@/context/RoleContext'
 import { formatDateTime } from '@/lib/utils'
 import { Trash2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 type ContentAssigneeRef = {
   user_id: string
@@ -130,10 +131,19 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
 
   const handleDelete = async () => {
     if (!item || !onDelete) return
-    if (!confirm(`Delete "${item.title}"? This cannot be undone.`)) return
+    const deletedItem = item
     setDeleting(true)
     await supabase.from('content_items').delete().eq('id', item.id)
     onDelete(item.id)
+    toast('Content item deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          console.log('Undo delete content item', deletedItem.id)
+        },
+      },
+      duration: 5000,
+    })
   }
 
   useEffect(() => {
@@ -191,6 +201,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
       const data = rawData as ItemWithRelations | null
       if (error) {
         setSaveError(error.message)
+        toast.error('Something went wrong')
       } else if (data) {
         // Insert all assignees into content_assignees
         if (selectedAssignees.length > 0) {
@@ -218,6 +229,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
             }),
           })
         }
+        toast.success('Content item created')
         if (onCreate) onCreate({ ...data, content_assignees: [] })
       }
     } else {
@@ -229,6 +241,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
         .single()
       if (error) {
         setSaveError(error.message)
+        toast.error('Something went wrong')
       } else if (data) {
         // Sync content_assignees: delete all then re-insert
         await (supabase as any).from('content_assignees').delete().eq('content_item_id', item.id)
@@ -241,6 +254,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
             }))
           )
         }
+        toast.success('Content item updated')
         if (onUpdate) onUpdate(data as ItemWithRelations)
       }
     }

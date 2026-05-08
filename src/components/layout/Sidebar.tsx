@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
 import { useState } from 'react'
 import { useRole } from '@/context/RoleContext'
+import { useSidebar } from '@/context/SidebarContext'
 import { getInitials } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
@@ -29,6 +30,7 @@ export default function Sidebar() {
   const router = useRouter()
   const [collapsed, setCollapsed] = useState(false)
   const { profile } = useRole()
+  const { mobileOpen, setMobileOpen } = useSidebar()
   const supabase = createClient()
 
   const handleSignOut = async () => {
@@ -39,11 +41,16 @@ export default function Sidebar() {
   const isActive = (href: string) =>
     href === '/app/dashboard' ? pathname === href : pathname.startsWith(href)
 
-  return (
+  const handleNavClick = () => {
+    // Close mobile sidebar on nav link click
+    setMobileOpen(false)
+  }
+
+  const sidebarContent = (
     <aside
       style={{ backgroundColor: '#191919' }}
       className={cn(
-        'h-screen flex flex-col transition-all duration-200 shrink-0',
+        'h-full flex flex-col transition-all duration-200 shrink-0',
         collapsed ? 'w-14' : 'w-56'
       )}
     >
@@ -74,6 +81,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={handleNavClick}
               className={cn(
                 'flex items-center gap-3 px-3 py-2 mx-2 rounded-lg text-sm transition-all',
                 collapsed ? 'justify-center' : '',
@@ -93,6 +101,7 @@ export default function Sidebar() {
       <div className="border-t border-white/10 p-3 space-y-0.5">
         <Link
           href="/app/settings/profile"
+          onClick={handleNavClick}
           className={cn(
             'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all',
             collapsed ? 'justify-center' : '',
@@ -133,5 +142,29 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+  )
+
+  return (
+    <>
+      {/* Desktop sidebar: always visible, collapsible */}
+      <div className="hidden md:flex h-screen">
+        {sidebarContent}
+      </div>
+
+      {/* Mobile sidebar: overlay when mobileOpen */}
+      {mobileOpen && (
+        <div className="md:hidden fixed inset-0 z-40 flex">
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50"
+            onClick={() => setMobileOpen(false)}
+          />
+          {/* Sidebar panel */}
+          <div className="relative z-50 h-full">
+            {sidebarContent}
+          </div>
+        </div>
+      )}
+    </>
   )
 }

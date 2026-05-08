@@ -13,6 +13,7 @@ import { timeAgo, getInitials, formatDateTime } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Trash2, Send, Repeat2, X, UserPlus } from 'lucide-react'
 import { useRole } from '@/context/RoleContext'
+import { toast } from 'sonner'
 
 type TaskWithRelations = Task & {
   client?: { name: string; slug: string } | null
@@ -141,6 +142,7 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
       .single()
 
     if (data) {
+      toast.success('Task updated')
       onUpdate(data as TaskWithRelations)
 
       const wasNotDone = prevStatusRef.current !== 'done'
@@ -180,6 +182,9 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
       }
       prevStatusRef.current = task.status
     }
+    if (!data) {
+      toast.error('Something went wrong')
+    }
     setSaving(false)
   }
 
@@ -212,9 +217,18 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
 
   const handleDelete = async () => {
     if (!task) return
-    if (!confirm('Delete this task?')) return
+    const deletedTask = task
     await supabase.from('tasks').delete().eq('id', task.id)
     onDelete(task.id)
+    toast('Task deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          console.log('Undo delete task', deletedTask.id)
+        },
+      },
+      duration: 5000,
+    })
   }
 
   const sendComment = async () => {

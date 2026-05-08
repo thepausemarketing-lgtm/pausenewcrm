@@ -1,10 +1,10 @@
 'use client'
 
 import { usePathname, useRouter } from 'next/navigation'
-import { Bell, Search, Plus, CheckSquare, CalendarDays, X } from 'lucide-react'
-import { useState, useEffect, useRef, useCallback } from 'react'
-import Link from 'next/link'
+import { Bell, Search, Menu } from 'lucide-react'
+import { useState, useEffect } from 'react'
 import { NotificationDrawer } from './NotificationDrawer'
+import { useSidebar } from '@/context/SidebarContext'
 
 const BREADCRUMBS: Record<string, string> = {
   '/app/dashboard': 'Dashboard',
@@ -63,246 +63,171 @@ interface SearchResults {
   content: ContentResult[]
 }
 
-// ---- Global Search Component ----
-function GlobalSearch() {
-  const router = useRouter()
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<SearchResults | null>(null)
+// ---- Command Palette ----
+function CommandPalette() {
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResults>({ clients: [], tasks: [], content: [] })
+  const router = useRouter()
 
-  const fetchResults = useCallback(async (q: string) => {
-    if (q.length < 2) {
-      setResults(null)
-      return
-    }
-    setLoading(true)
-    try {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`)
-      const data = await res.json() as SearchResults
-      setResults(data)
-    } catch {
-      setResults(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value
-    setQuery(val)
-    setOpen(true)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => fetchResults(val), 300)
-  }
-
-  const close = useCallback(() => {
-    setOpen(false)
-    setQuery('')
-    setResults(null)
-  }, [])
-
-  // CMD+K shortcut
+  // CMD+K listener
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        inputRef.current?.focus()
-        setOpen(true)
-      }
-      if (e.key === 'Escape') {
-        close()
-        inputRef.current?.blur()
+        setOpen(o => !o)
       }
     }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [close])
-
-  // Click outside
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
   }, [])
 
-  const hasResults =
-    results && (results.clients.length > 0 || results.tasks.length > 0 || results.content.length > 0)
-  const showDropdown = open && query.length >= 2
+  // Debounced search
+  useEffect(() => {
+    if (query.length < 2) {
+      setResults({ clients: [], tasks: [], content: [] })
+      return
+    }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`)
+        setResults(await res.json() as SearchResults)
+      } catch {
+        setResults({ clients: [], tasks: [], content: [] })
+      }
+    }, 300)
+    return () => clearTimeout(t)
+  }, [query])
+
+  const navigate = (href: string) => {
+    router.push(href)
+    setOpen(false)
+    setQuery('')
+  }
+
+  if (!open) return (
+    <button
+      onClick={() => setOpen(true)}
+      className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors w-56"
+    >
+      <Search size={12} />
+      <span>Search or run command…</span>
+      <kbd className="ml-auto text-[10px] bg-white border border-gray-200 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+    </button>
+  )
 
   return (
-    <div ref={containerRef} className="relative">
-      <div className="relative">
-        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-        <input
-          ref={inputRef}
-          type="text"
-          value={query}
-          onChange={handleChange}
-          onFocus={() => query.length >= 2 && setOpen(true)}
-          placeholder="Search clients, tasks, content… ⌘K"
-          className="w-64 h-8 pl-8 pr-7 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-violet-400 focus:bg-white transition-colors"
-        />
-        {query && (
-          <button
-            onClick={() => { setQuery(''); setResults(null); setOpen(false) }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-          >
-            <X size={12} />
-          </button>
-        )}
-      </div>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 bg-black/40 z-50" onClick={() => setOpen(false)} />
+      {/* Palette */}
+      <div className="fixed top-[20%] left-1/2 -translate-x-1/2 z-50 w-full max-w-lg bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+          <Search size={15} className="text-gray-400 shrink-0" />
+          <input
+            autoFocus
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search or type a command…"
+            className="flex-1 text-sm outline-none placeholder:text-gray-400"
+            onKeyDown={e => e.key === 'Escape' && setOpen(false)}
+          />
+          <kbd className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded font-mono">ESC</kbd>
+        </div>
+        <div className="max-h-96 overflow-y-auto py-2">
+          {/* Actions section */}
+          <SectionHeader label="Actions" />
+          {[
+            { label: 'New Task', icon: '✅', href: '/app/tasks?new=1' },
+            { label: 'New Content Item', icon: '📅', href: '/app/calendar?new=1' },
+            { label: 'Go to Dashboard', icon: '🏠', href: '/app/dashboard' },
+            { label: 'Go to Calendar', icon: '📆', href: '/app/calendar' },
+            { label: 'Go to Tasks', icon: '☑️', href: '/app/tasks' },
+            { label: 'Go to Clients', icon: '👥', href: '/app/clients' },
+            { label: 'Go to Reports', icon: '📊', href: '/app/reports' },
+          ]
+            .filter(a => !query || a.label.toLowerCase().includes(query.toLowerCase()))
+            .map(a => (
+              <CommandItem key={a.href} icon={a.icon} label={a.label} onClick={() => navigate(a.href)} />
+            ))}
 
-      {showDropdown && (
-        <div className="absolute top-full mt-1 left-0 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden">
-          {loading && (
-            <div className="px-4 py-3 text-sm text-gray-400">Searching…</div>
+          {/* Search results */}
+          {results.clients.length > 0 && (
+            <>
+              <SectionHeader label="Clients" />
+              {results.clients.map((c: ClientResult) => (
+                <CommandItem
+                  key={c.id}
+                  icon="👤"
+                  label={c.name}
+                  sub={c.status}
+                  onClick={() => navigate(`/app/clients/${c.slug}`)}
+                />
+              ))}
+            </>
           )}
-
-          {!loading && !hasResults && (
-            <div className="px-4 py-3 text-sm text-gray-400">No results for &quot;{query}&quot;</div>
+          {results.tasks.length > 0 && (
+            <>
+              <SectionHeader label="Tasks" />
+              {results.tasks.map((t: TaskResult) => (
+                <CommandItem
+                  key={t.id}
+                  icon="✅"
+                  label={t.title}
+                  sub={t.client?.name}
+                  onClick={() => navigate(`/app/tasks/${t.id}`)}
+                />
+              ))}
+            </>
           )}
-
-          {!loading && hasResults && (
-            <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto">
-              {results.clients.length > 0 && (
-                <div>
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 bg-gray-50">
-                    Clients
-                  </div>
-                  {results.clients.map(c => (
-                    <Link
-                      key={c.id}
-                      href={`/app/clients/${c.slug}`}
-                      onClick={close}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-violet-50 transition-colors"
-                    >
-                      <span className="text-sm font-medium text-gray-800 truncate">{c.name}</span>
-                      <span className="ml-auto text-xs text-gray-400 capitalize shrink-0">{c.status}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {results.tasks.length > 0 && (
-                <div>
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 bg-gray-50">
-                    Tasks
-                  </div>
-                  {results.tasks.map(t => (
-                    <Link
-                      key={t.id}
-                      href={`/app/tasks/${t.id}`}
-                      onClick={close}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-violet-50 transition-colors"
-                    >
-                      <CheckSquare size={13} className="text-violet-400 shrink-0" />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-800 truncate">{t.title}</div>
-                        {t.client && (
-                          <div className="text-xs text-gray-400 truncate">{t.client.name}</div>
-                        )}
-                      </div>
-                      <span className="ml-auto text-xs text-gray-400 capitalize shrink-0">{t.status.replace('_', ' ')}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-
-              {results.content.length > 0 && (
-                <div>
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400 bg-gray-50">
-                    Content
-                  </div>
-                  {results.content.map(c => (
-                    <Link
-                      key={c.id}
-                      href={`/app/calendar/${c.id}`}
-                      onClick={close}
-                      className="flex items-center gap-2 px-3 py-2 hover:bg-violet-50 transition-colors"
-                    >
-                      <CalendarDays size={13} className="text-blue-400 shrink-0" />
-                      <div className="min-w-0">
-                        <div className="text-sm font-medium text-gray-800 truncate">{c.title}</div>
-                        {c.client && (
-                          <div className="text-xs text-gray-400 truncate">{c.client.name}</div>
-                        )}
-                      </div>
-                      <span className="ml-auto text-xs text-gray-400 capitalize shrink-0">{c.status.replace('_', ' ')}</span>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
+          {results.content.length > 0 && (
+            <>
+              <SectionHeader label="Content" />
+              {results.content.map((c: ContentResult) => (
+                <CommandItem
+                  key={c.id}
+                  icon="📅"
+                  label={c.title}
+                  sub={c.client?.name}
+                  onClick={() => navigate(`/app/calendar/${c.id}`)}
+                />
+              ))}
+            </>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   )
 }
 
-// ---- Quick Create Button ----
-function QuickCreate() {
-  const router = useRouter()
-  const [open, setOpen] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  const handleNewTask = () => {
-    setOpen(false)
-    router.push('/app/tasks?new=1')
-  }
-
-  const handleNewContent = () => {
-    setOpen(false)
-    router.push('/app/calendar?new=1')
-  }
-
+function SectionHeader({ label }: { label: string }) {
   return (
-    <div ref={containerRef} className="relative">
-      <button
-        onClick={() => setOpen(prev => !prev)}
-        className="flex items-center justify-center w-7 h-7 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors shadow-sm"
-        title="Quick create"
-      >
-        <Plus size={15} />
-      </button>
+    <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-4 py-1.5">
+      {label}
+    </p>
+  )
+}
 
-      {open && (
-        <div className="absolute top-full mt-1 right-0 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-50 overflow-hidden py-1">
-          <button
-            onClick={handleNewTask}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 transition-colors"
-          >
-            <CheckSquare size={14} className="text-violet-500 shrink-0" />
-            New Task
-          </button>
-          <button
-            onClick={handleNewContent}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-gray-700 hover:bg-violet-50 transition-colors"
-          >
-            <CalendarDays size={14} className="text-blue-500 shrink-0" />
-            New Content
-          </button>
-        </div>
-      )}
-    </div>
+function CommandItem({
+  icon,
+  label,
+  sub,
+  onClick,
+}: {
+  icon: string
+  label: string
+  sub?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-gray-50 text-left transition-colors"
+    >
+      <span className="text-base">{icon}</span>
+      <span className="flex-1 text-gray-800">{label}</span>
+      {sub && <span className="text-xs text-gray-400">{sub}</span>}
+    </button>
   )
 }
 
@@ -310,20 +235,28 @@ function QuickCreate() {
 export default function TopBar() {
   const pathname = usePathname()
   const [notifOpen, setNotifOpen] = useState(false)
+  const { setMobileOpen } = useSidebar()
 
   return (
     <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0">
-      <div className="flex items-center">
+      <div className="flex items-center gap-2">
+        {/* Hamburger button: only visible on mobile */}
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="md:hidden p-1.5 rounded-lg text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-colors"
+          title="Open menu"
+        >
+          <Menu size={18} />
+        </button>
         <span className="text-gray-400 text-sm mr-2">Pause Marketing /</span>
         <h1 className="text-sm font-semibold text-gray-800">{getPageTitle(pathname)}</h1>
       </div>
 
       <div className="absolute left-1/2 -translate-x-1/2">
-        <GlobalSearch />
+        <CommandPalette />
       </div>
 
       <div className="flex items-center gap-2">
-        <QuickCreate />
         <button
           onClick={() => setNotifOpen(true)}
           className="relative p-1.5 rounded-lg text-gray-500 hover:text-gray-800 transition-colors"

@@ -7,11 +7,13 @@ import {
   getDay, isToday, parseISO,
 } from 'date-fns'
 import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download, Pencil } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { PLATFORMS, CONTENT_STATUSES, CONTENT_TYPES } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 import ContentItemDrawer from './ContentItemDrawer'
 import ContentKanbanBoard from './ContentKanbanBoard'
+import EmptyState from '@/components/shared/EmptyState'
 
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
@@ -184,16 +186,28 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
   const handleItemUpdated = (updated: ItemWithRelations) => {
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
     setSelectedItem(null)
+    toast.success('Content item updated')
   }
 
   const handleItemCreated = (created: ItemWithRelations) => {
     setItems(prev => [...prev, created])
     setCreateDate(null)
+    toast.success('Content item created')
   }
 
   const handleItemDeleted = (id: string) => {
+    const deletedItem = items.find(i => i.id === id)
     setItems(prev => prev.filter(i => i.id !== id))
     setSelectedItem(null)
+    toast('Content item deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (deletedItem) setItems(prev => [...prev, deletedItem])
+        },
+      },
+      duration: 5000,
+    })
   }
 
   const toggleCol = (key: string) => {
@@ -418,8 +432,17 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
             <tbody className="divide-y divide-gray-100">
               {listItems.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColDefs.length} className="px-4 py-12 text-center text-sm text-gray-400">
-                    {dateFilter === 'overdue' ? 'No overdue content 🎉' : 'No content for this filter'}
+                  <td colSpan={visibleColDefs.length}>
+                    <EmptyState
+                      icon={CalendarDays}
+                      title={dateFilter === 'overdue' ? 'No overdue content 🎉' : 'No content items'}
+                      description={dateFilter === 'all' ? 'Schedule your first piece of content' : 'Try a different filter'}
+                      action={
+                        dateFilter === 'all' ? (
+                          <Button size="sm" onClick={() => setCreateDate(format(new Date(), 'yyyy-MM-dd'))}>+ New Content</Button>
+                        ) : undefined
+                      }
+                    />
                   </td>
                 </tr>
               ) : listItems.map(item => {

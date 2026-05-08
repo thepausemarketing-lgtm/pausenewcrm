@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useState } from 'react'
+import { toast } from 'sonner'
 import type { Client } from '@/types/database.types'
 
 const CURRENCIES = [
@@ -115,6 +116,7 @@ export default function ClientForm({ client, allClients = [], onSuccess }: Props
       })
     }
 
+    toast.success('Client saved')
     if (onSuccess) onSuccess()
     else router.push(`/app/clients/${payload.slug}`)
     router.refresh()

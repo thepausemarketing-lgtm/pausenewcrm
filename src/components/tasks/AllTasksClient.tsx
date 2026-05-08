@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2 } from 'lucide-react'
+import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2, CheckCircle } from 'lucide-react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
@@ -46,6 +47,9 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -58,16 +62,57 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
   const handleTaskCreated = (task: TaskWithAssignees) => {
     setTasks(prev => [task, ...prev])
     setNewTaskOpen(false)
+    toast.success('Task created')
   }
 
   const handleTaskUpdated = (updated: TaskWithAssignees) => {
     setTasks(prev => prev.map(t => t.id === updated.id ? { ...t, ...updated } : t))
     setSelectedTaskId(null)
+    toast.success('Task updated')
   }
 
   const handleTaskDeleted = (id: string) => {
+    const deletedTask = tasks.find(t => t.id === id)
     setTasks(prev => prev.filter(t => t.id !== id))
     setSelectedTaskId(null)
+    toast('Task deleted', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (deletedTask) setTasks(prev => [deletedTask, ...prev])
+        },
+      },
+      duration: 5000,
+    })
+  }
+
+  const handleBulkStatusChange = async (status: string) => {
+    const ids = Array.from(selectedIds)
+    setTasks(prev => prev.map(t => selectedIds.has(t.id) ? { ...t, status: status as any } : t))
+    setSelectedIds(new Set())
+    await Promise.all(ids.map(id =>
+      fetch(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    ))
+  }
+
+  const handleBulkPriorityChange = async (priority: string) => {
+    const ids = Array.from(selectedIds)
+    setTasks(prev => prev.map(t => selectedIds.has(t.id) ? { ...t, priority: priority as any } : t))
+    setSelectedIds(new Set())
+    await Promise.all(ids.map(id =>
+      fetch(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }) })
+    ))
+  }
+
+  const saveInlineEdit = async (id: string) => {
+    if (!editingTitle.trim()) { setEditingId(null); return }
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, title: editingTitle } : t))
+    setEditingId(null)
+    await fetch(`/api/tasks/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: editingTitle })
+    })
   }
 
   const dateFiltered = useMemo(() => {
@@ -219,13 +264,20 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           <EmptyState
             icon={CalendarDays}
             title={
-              dateFilter === 'all' ? 'No tasks found' :
+              dateFilter === 'all' ? "You're all caught up" :
               dateFilter === 'today' ? 'Nothing due today' :
               dateFilter === 'tomorrow' ? 'Nothing due tomorrow' :
               dateFilter === 'overdue' ? 'No overdue tasks 🎉' :
               'No tasks in this date range'
             }
-            description="Try a different filter"
+            description={
+              dateFilter === 'all' ? 'No pending tasks — create one to get started' : 'Try a different filter'
+            }
+            action={
+              dateFilter === 'all' ? (
+                <Button size="sm" onClick={() => setNewTaskOpen(true)}>+ New Task</Button>
+              ) : undefined
+            }
           />
         </div>
       ) : (
@@ -233,6 +285,17 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-3 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-violet-600 focus:ring-violet-400"
+                    checked={filtered.length > 0 && filtered.every(t => selectedIds.has(t.id))}
+                    onChange={e => {
+                      if (e.target.checked) setSelectedIds(new Set(filtered.map(t => t.id)))
+                      else setSelectedIds(new Set())
+                    }}
+                  />
+                </th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Task</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
@@ -248,15 +311,49 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
                 const isOverdue = task.due_date && task.due_date < today && !['done', 'cancelled'].includes(task.status)
                 return (
                   <tr key={task.id} className="hover:bg-gray-50 group cursor-pointer" onClick={() => setSelectedTaskId(task.id)}>
-                    <td className="px-4 py-3">
-                      <button className="font-medium text-gray-900 group-hover:text-violet-600 inline-flex items-center gap-1.5 text-left">
-                        {task.title}
-                        {task.recurrence_type && task.recurrence_type !== 'none' && (
-                          <Repeat2 size={11} className="text-violet-400 shrink-0" />
-                        )}
-                      </button>
-                      {task.description && (
-                        <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{task.description}</p>
+                    <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className={`rounded border-gray-300 text-violet-600 focus:ring-violet-400 transition-opacity ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        checked={selectedIds.has(task.id)}
+                        onChange={e => {
+                          const next = new Set(selectedIds)
+                          if (e.target.checked) next.add(task.id)
+                          else next.delete(task.id)
+                          setSelectedIds(next)
+                        }}
+                      />
+                    </td>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      {editingId === task.id ? (
+                        <input
+                          autoFocus
+                          value={editingTitle}
+                          onChange={e => setEditingTitle(e.target.value)}
+                          onBlur={() => saveInlineEdit(task.id)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') saveInlineEdit(task.id)
+                            if (e.key === 'Escape') setEditingId(null)
+                          }}
+                          className="text-sm text-gray-800 border-b border-blue-400 outline-none bg-transparent w-full"
+                          onClick={e => e.stopPropagation()}
+                        />
+                      ) : (
+                        <div>
+                          <p
+                            className="font-medium text-gray-900 group-hover:text-violet-600 inline-flex items-center gap-1.5 text-left cursor-pointer"
+                            onDoubleClick={() => { setEditingId(task.id); setEditingTitle(task.title) }}
+                            onClick={() => setSelectedTaskId(task.id)}
+                          >
+                            {task.title}
+                            {task.recurrence_type && task.recurrence_type !== 'none' && (
+                              <Repeat2 size={11} className="text-violet-400 shrink-0" />
+                            )}
+                          </p>
+                          {task.description && (
+                            <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{task.description}</p>
+                          )}
+                        </div>
                       )}
                     </td>
                     <td className="px-4 py-3"><StatusBadge label={priority.label} color={priority.color} /></td>
@@ -308,6 +405,32 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           onUpdate={t => handleTaskUpdated(t as TaskWithAssignees)}
           onDelete={handleTaskDeleted}
         />
+      )}
+
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-gray-900 text-white rounded-xl px-4 py-3 flex items-center gap-4 shadow-2xl">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <div className="w-px h-4 bg-white/20" />
+
+          {/* Mark Done */}
+          <button onClick={() => handleBulkStatusChange('done')} className="flex items-center gap-1.5 text-sm hover:text-green-400 transition-colors">
+            <CheckCircle size={14} /> Mark Done
+          </button>
+
+          {/* Change Priority */}
+          <select onChange={e => e.target.value && handleBulkPriorityChange(e.target.value)} className="bg-transparent text-sm border-none outline-none cursor-pointer">
+            <option value="">Set Priority</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          {/* Clear selection */}
+          <button onClick={() => setSelectedIds(new Set())} className="text-sm text-white/60 hover:text-white">
+            Clear
+          </button>
+        </div>
       )}
     </div>
   )

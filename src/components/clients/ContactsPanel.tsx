@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Plus, Mail, Phone, ExternalLink, Star } from 'lucide-react'
@@ -32,12 +33,25 @@ export default function ContactsPanel({ clientId, contacts: initial }: Props) {
       setContacts([...contacts, data])
       setForm({ full_name: '', title: '', email: '', phone: '', linkedin_url: '' })
       setAdding(false)
+      toast.success('Contact added')
+    } else if (error) {
+      toast.error('Something went wrong')
     }
   }
 
   const handleDelete = async (id: string) => {
+    const deletedContact = contacts.find(c => c.id === id)
     await supabase.from('contacts').delete().eq('id', id)
     setContacts(contacts.filter(c => c.id !== id))
+    toast('Contact removed', {
+      action: {
+        label: 'Undo',
+        onClick: () => {
+          if (deletedContact) setContacts(prev => [...prev, deletedContact])
+        },
+      },
+      duration: 5000,
+    })
   }
 
   return (
@@ -87,7 +101,14 @@ export default function ContactsPanel({ clientId, contacts: initial }: Props) {
       )}
 
       {contacts.length === 0 && !adding ? (
-        <EmptyState icon={Mail} title="No contacts yet" description="Add the people you work with at this client" />
+        <EmptyState
+          icon={Mail}
+          title="No contacts yet"
+          description="Add the people you work with at this client"
+          action={
+            <Button size="sm" onClick={() => setAdding(true)}>Add first contact</Button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {contacts.map((contact) => (
