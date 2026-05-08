@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2 } from 'lucide-react'
+import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2, CheckCircle2, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
@@ -52,6 +52,7 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
   const [assigneeFilter, setAssigneeFilter] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   const today = toDateStr(new Date())
   const tomorrow = toDateStr(new Date(Date.now() + 86400000))
@@ -81,6 +82,26 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
       },
       duration: 5000,
     })
+  }
+
+  const handleBulkStatusChange = async (status: string) => {
+    const ids = Array.from(selectedIds)
+    setTasks(prev => prev.map(t => selectedIds.has(t.id) ? { ...t, status: status as any } : t))
+    setSelectedIds(new Set())
+    toast.success(`${ids.length} task${ids.length !== 1 ? 's' : ''} updated`)
+    await Promise.all(ids.map(id =>
+      fetch(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) })
+    ))
+  }
+
+  const handleBulkPriorityChange = async (priority: string) => {
+    const ids = Array.from(selectedIds)
+    setTasks(prev => prev.map(t => selectedIds.has(t.id) ? { ...t, priority: priority as any } : t))
+    setSelectedIds(new Set())
+    toast.success(`Priority updated for ${ids.length} task${ids.length !== 1 ? 's' : ''}`)
+    await Promise.all(ids.map(id =>
+      fetch(`/api/tasks/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }) })
+    ))
   }
 
   const saveInlineEdit = async (id: string) => {
@@ -242,6 +263,14 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
+                <th className="px-3 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-violet-600 focus:ring-violet-400"
+                    checked={filtered.length > 0 && filtered.every(t => selectedIds.has(t.id))}
+                    onChange={e => setSelectedIds(e.target.checked ? new Set(filtered.map(t => t.id)) : new Set())}
+                  />
+                </th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Task</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
@@ -256,7 +285,21 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
                 const status = TASK_STATUSES.find(s => s.value === task.status)!
                 const isOverdue = task.due_date && task.due_date < today && !['done', 'cancelled'].includes(task.status)
                 return (
-                  <tr key={task.id} className="hover:bg-gray-50 group cursor-pointer" onClick={() => setSelectedTaskId(task.id)}>
+                  <tr key={task.id} className={`hover:bg-gray-50 group cursor-pointer ${selectedIds.has(task.id) ? 'bg-violet-50/40' : ''}`} onClick={() => setSelectedTaskId(task.id)}>
+                    <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        className="rounded border-gray-300 text-violet-600 focus:ring-violet-400"
+                        checked={selectedIds.has(task.id)}
+                        onChange={e => {
+                          const next = new Set(selectedIds)
+                          if (e.target.checked) next.add(task.id)
+                          else next.delete(task.id)
+                          setSelectedIds(next)
+                        }}
+                        onClick={e => e.stopPropagation()}
+                      />
+                    </td>
                     <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                       {editingId === task.id ? (
                         <input
@@ -316,6 +359,29 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-gray-900 text-white rounded-xl px-4 py-3 flex items-center gap-4 shadow-2xl">
+          <span className="text-sm font-medium">{selectedIds.size} selected</span>
+          <div className="w-px h-4 bg-white/20" />
+          <button onClick={() => handleBulkStatusChange('done')} className="flex items-center gap-1.5 text-sm hover:text-green-400 transition-colors">
+            <CheckCircle2 size={14} /> Mark Done
+          </button>
+          <select onChange={e => { if (e.target.value) { handleBulkPriorityChange(e.target.value); e.target.value = '' } }}
+            className="bg-transparent text-sm border border-white/20 rounded px-2 py-0.5 outline-none cursor-pointer">
+            <option value="">Set Priority</option>
+            <option value="urgent">Urgent</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <div className="w-px h-4 bg-white/20" />
+          <button onClick={() => setSelectedIds(new Set())} className="text-white/60 hover:text-white transition-colors">
+            <X size={14} />
+          </button>
         </div>
       )}
 
