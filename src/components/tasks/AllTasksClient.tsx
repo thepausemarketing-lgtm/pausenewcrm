@@ -198,7 +198,7 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
             <button
               key={key}
               onClick={() => setDateFilter(key)}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all border"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border"
               style={
                 active
                   ? { backgroundColor: '#ede9fe', borderColor: '#7c3aed', color: '#6d28d9' }
