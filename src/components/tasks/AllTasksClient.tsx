@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2, CheckCircle } from 'lucide-react'
+import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2, CheckCircle, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
@@ -84,6 +84,16 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
       },
       duration: 5000,
     })
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds)
+    setTasks(prev => prev.filter(t => !selectedIds.has(t.id)))
+    setSelectedIds(new Set())
+    toast.success(`${ids.length} task${ids.length !== 1 ? 's' : ''} deleted`)
+    await Promise.all(ids.map(id =>
+      fetch(`/api/tasks/${id}`, { method: 'DELETE' })
+    ))
   }
 
   const handleBulkStatusChange = async (status: string) => {
@@ -426,6 +436,12 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
             <option value="low">Low</option>
           </select>
 
+          <div className="w-px h-4 bg-white/20" />
+          {/* Bulk Delete */}
+          <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm hover:text-red-400 transition-colors">
+            <Trash2 size={14} />
+          </button>
+          <div className="w-px h-4 bg-white/20" />
           {/* Clear selection */}
           <button onClick={() => setSelectedIds(new Set())} className="text-sm text-white/60 hover:text-white">
             Clear
