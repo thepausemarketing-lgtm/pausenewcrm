@@ -4,9 +4,9 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
-  getDay, isToday, parseISO,
+  getDay, isToday,
 } from 'date-fns'
-import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Plus, Columns, List, Calendar, CalendarDays, Clock, AlertCircle, Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { PLATFORMS, CONTENT_STATUSES, CONTENT_TYPES } from '@/lib/constants'
@@ -14,6 +14,7 @@ import type { ContentItem } from '@/types/database.types'
 import ContentItemDrawer from './ContentItemDrawer'
 import ContentKanbanBoard from './ContentKanbanBoard'
 import EmptyState from '@/components/shared/EmptyState'
+import InlineContentRow from './InlineContentRow'
 
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
@@ -63,37 +64,6 @@ function getOverallStatus(item: ItemWithRelations): { label: string; color: stri
   if (ds === 'done' && ir === 'pending') return { label: 'Awaiting Review', color: '#7c3aed' }
   if (ds === 'in_progress') return { label: 'In Design', color: '#0891b2' }
   return { label: 'Not Started', color: '#6b7280' }
-}
-
-function DesignStatusBadge({ value }: { value: string }) {
-  const map: Record<string, { label: string; color: string }> = {
-    not_started: { label: 'Not Started', color: '#9ca3af' },
-    in_progress: { label: 'In Progress', color: '#0891b2' },
-    done:        { label: 'Done', color: '#16a34a' },
-  }
-  const d = map[value] ?? { label: value, color: '#9ca3af' }
-  return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-      style={{ backgroundColor: d.color + '20', color: d.color }}>
-      {d.label}
-    </span>
-  )
-}
-
-function ReviewBadge({ value }: { value: string }) {
-  const map: Record<string, { label: string; color: string }> = {
-    pending:          { label: 'Pending', color: '#9ca3af' },
-    approved:         { label: 'Approved', color: '#16a34a' },
-    changes_required: { label: 'Changes', color: '#d97706' },
-    rejected:         { label: 'Rejected', color: '#dc2626' },
-  }
-  const d = map[value] ?? { label: value, color: '#9ca3af' }
-  return (
-    <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-      style={{ backgroundColor: d.color + '20', color: d.color }}>
-      {d.label}
-    </span>
-  )
 }
 
 type DateFilter = 'all' | 'today' | 'tomorrow' | 'overdue' | 'custom'
@@ -445,100 +415,17 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
                     />
                   </td>
                 </tr>
-              ) : listItems.map(item => {
-                const platform = PLATFORMS.find(p => p.value === (item.platforms?.[0] ?? item.platform))
-                const statusObj = CONTENT_STATUSES.find(s => s.value === item.status)
-                return (
-                  <tr key={item.id} className="hover:bg-gray-50 cursor-pointer group" onClick={() => setSelectedItem(item)}>
-                    {visibleCols.has('title') || true ? (
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        <div className="flex items-center gap-2">
-                          <span>{item.title}</span>
-                          <Pencil size={11} className="text-gray-300 group-hover:text-violet-400 transition-colors shrink-0" />
-                        </div>
-                      </td>
-                    ) : null}
-                    {visibleCols.has('client') && (
-                      <td className="px-4 py-3 text-gray-500">{item.client?.name ?? '—'}</td>
-                    )}
-                    {visibleCols.has('content_type') && (
-                      <td className="px-4 py-3">
-                        {item.content_type ? (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
-                            {CONTENT_TYPES.find(t => t.value === item.content_type)?.label ?? item.content_type}
-                          </span>
-                        ) : '—'}
-                      </td>
-                    )}
-                    {visibleCols.has('platform') && (
-                      <td className="px-4 py-3">
-                        {item.platforms?.length ? (
-                          <div className="flex flex-wrap gap-1">
-                            {item.platforms.slice(0, 3).map(pv => {
-                              const pl = PLATFORMS.find(p => p.value === pv)
-                              return (
-                                <span key={pv} className="flex items-center gap-1 text-xs text-gray-600">
-                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: pl?.color }} />
-                                  {pl?.label ?? pv}
-                                </span>
-                              )
-                            })}
-                            {item.platforms.length > 3 && <span className="text-xs text-gray-400">+{item.platforms.length - 3}</span>}
-                          </div>
-                        ) : (
-                          <span className="flex items-center gap-1.5 text-gray-600 text-xs">
-                            <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: platform?.color }} />
-                            {platform?.label ?? '—'}
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    {visibleCols.has('design_date') && (
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {item.design_date ? format(parseISO(item.design_date), 'dd/MM/yyyy') : '—'}
-                      </td>
-                    )}
-                    {visibleCols.has('assignee') && (
-                      <td className="px-4 py-3 text-gray-500 text-xs">{item.assignee?.full_name ?? '—'}</td>
-                    )}
-                    {visibleCols.has('design_status') && (
-                      <td className="px-4 py-3"><DesignStatusBadge value={item.design_status ?? 'not_started'} /></td>
-                    )}
-                    {visibleCols.has('internal_review') && (
-                      <td className="px-4 py-3"><ReviewBadge value={item.internal_review ?? 'pending'} /></td>
-                    )}
-                    {visibleCols.has('client_approval') && (
-                      <td className="px-4 py-3"><ReviewBadge value={item.client_approval ?? 'pending'} /></td>
-                    )}
-                    {visibleCols.has('publish_date') && (
-                      <td className="px-4 py-3 text-gray-500 text-xs">
-                        {item.publish_at ? new Date(item.publish_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
-                      </td>
-                    )}
-                    {visibleCols.has('status') && (
-                      <td className="px-4 py-3">
-                        {statusObj && (
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                            style={{ backgroundColor: statusObj.color + '20', color: statusObj.color }}>
-                            {statusObj.label}
-                          </span>
-                        )}
-                      </td>
-                    )}
-                    {visibleCols.has('overall_status') && (() => {
-                      const os = getOverallStatus(item)
-                      return (
-                        <td className="px-4 py-3">
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium"
-                            style={{ backgroundColor: os.color + '20', color: os.color }}>
-                            {os.label}
-                          </span>
-                        </td>
-                      )
-                    })()}
-                  </tr>
-                )
-              })}
+              ) : listItems.map(item => (
+                <InlineContentRow
+                  key={item.id}
+                  item={item}
+                  profiles={profiles}
+                  visibleCols={visibleCols}
+                  canApprove={canApprove}
+                  onOpenDrawer={i => setSelectedItem(i)}
+                  onUpdate={updated => setItems(prev => prev.map(i => i.id === updated.id ? updated : i))}
+                />
+              ))}
             </tbody>
           </table>
         </div>
