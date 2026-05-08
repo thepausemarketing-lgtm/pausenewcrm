@@ -97,37 +97,48 @@ export default async function DashboardPage() {
     teamMemberIds = allProfiles.map(p => p.id)
   }
 
-  // Fetch tasks + content for team members if any
-  let teamTasks: (TaskWithClient & { assigned_to: string })[] = []
-  let teamContent: (ContentWithClient & { assigned_to: string | null })[] = []
+  // Fetch tasks + content stats for team members
+  type TeamRow = { assigned_to: string; due_date: string | null; status: string }
+  type ContentRow = { assigned_to: string | null; publish_at: string | null; live_links: Record<string, string> | null }
+
+  let rawTeamTasks: TeamRow[] = []
+  let rawTeamContent: ContentRow[] = []
+
+  const today = new Date().toISOString().split('T')[0]
 
   if (teamMemberIds.length > 0) {
     const [teamTasksRes, teamContentRes] = await Promise.all([
       supabase
         .from('tasks')
-        .select('*, client:clients(name,slug)')
+        .select('assigned_to, due_date, status')
         .in('assigned_to', teamMemberIds)
-        .not('status', 'in', '(done,cancelled)')
-        .order('due_date', { ascending: true, nullsFirst: false })
-        .limit(100),
+        .not('status', 'in', '(done,cancelled)'),
       supabase
         .from('content_items')
-        .select('*, client:clients(name,slug)')
+        .select('assigned_to, publish_at, live_links, status')
         .in('assigned_to', teamMemberIds)
-        .gte('publish_at', new Date().toISOString())
-        .order('publish_at', { ascending: true })
-        .limit(100),
+        .not('status', 'in', '(cancelled)'),
     ])
-    teamTasks = (teamTasksRes.data ?? []) as any[]
-    teamContent = (teamContentRes.data ?? []) as any[]
+    rawTeamTasks = (teamTasksRes.data ?? []) as TeamRow[]
+    rawTeamContent = (teamContentRes.data ?? []) as ContentRow[]
   }
 
-  // Group tasks + content by assignee
-  const teamByPerson = allProfiles.map(profile => ({
-    profile,
-    tasks: teamTasks.filter(t => t.assigned_to === profile.id).slice(0, 5),
-    content: teamContent.filter(c => c.assigned_to === profile.id).slice(0, 5),
-  })).filter(p => p.tasks.length > 0 || p.content.length > 0)
+  // Compute per-person stats
+  const teamByPerson = allProfiles.map(profile => {
+    const myTasks = rawTeamTasks.filter(t => t.assigned_to === profile.id)
+    const myContent = rawTeamContent.filter(c => c.assigned_to === profile.id)
+
+    const tasksToday    = myTasks.filter(t => t.due_date === today).length
+    const overdueTasks  = myTasks.filter(t => t.due_date && t.due_date < today).length
+    const contentToday  = myContent.filter(c => c.publish_at?.startsWith(today)).length
+    const overdueContent = myContent.filter(c => {
+      if (!c.publish_at) return false
+      const isPosted = Object.values(c.live_links ?? {}).some(v => v)
+      return !isPosted && c.publish_at < new Date().toISOString()
+    }).length
+
+    return { profile, tasksToday, overdueTasks, contentToday, overdueContent }
+  })
 
   const kpis = [
     { label: 'Active Clients', value: stats.activeClients ?? 0 },
@@ -240,7 +251,7 @@ export default async function DashboardPage() {
             <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {teamByPerson.map(({ profile, tasks, content }) => (
+            {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }) => (
               <div key={profile.id} className="bg-white rounded-xl border border-gray-200 p-5">
                 {/* Person header */}
                 <div className="flex items-center gap-2.5 mb-4">
@@ -250,69 +261,27 @@ export default async function DashboardPage() {
                       : profile.full_name?.charAt(0).toUpperCase()}
                   </div>
                   <p className="text-sm font-semibold text-gray-900">{profile.full_name}</p>
-                  <div className="ml-auto flex items-center gap-2">
-                    {tasks.length > 0 && (
-                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">
-                        {tasks.length} task{tasks.length !== 1 ? 's' : ''}
-                      </span>
-                    )}
-                    {content.length > 0 && (
-                      <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium">
-                        {content.length} content
-                      </span>
-                    )}
-                  </div>
                 </div>
 
-                {/* Tasks */}
-                {tasks.length > 0 && (
-                  <div className="mb-3">
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Tasks</p>
-                    <div>
-                      {tasks.map((task) => {
-                        const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
-                        return (
-                          <Link key={task.id} href={`/app/tasks/${task.id}`}
-                            className="flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0 group">
-                            <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: priority?.color ?? '#9ca3af' }} />
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-gray-800 group-hover:text-gray-900 truncate">{task.title}</p>
-                              <p className="text-[11px] text-gray-400">
-                                {dueDateLabel(task.due_date)}
-                                {task.client ? ` · ${task.client.name}` : ''}
-                              </p>
-                            </div>
-                          </Link>
-                        )
-                      })}
-                    </div>
+                {/* 4 stat tiles */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-gray-400 mb-1">Content Today</p>
+                    <p className="text-2xl font-bold text-gray-900">{contentToday}</p>
                   </div>
-                )}
-
-                {/* Content */}
-                {content.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Content</p>
-                    <div>
-                      {content.map((item) => {
-                        const status = CONTENT_STATUSES.find(s => s.value === item.status)
-                        return (
-                          <Link key={item.id} href={`/app/calendar/${item.id}`}
-                            className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0 group">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-xs text-gray-800 group-hover:text-gray-900 truncate">{item.title}</p>
-                              <p className="text-[11px] text-gray-400">
-                                {item.publish_at ? formatDate(item.publish_at, 'dd/MM') : '—'}
-                                {item.client ? ` · ${item.client.name}` : ''}
-                              </p>
-                            </div>
-                            {status && <StatusBadge label={status.label} color={status.color} />}
-                          </Link>
-                        )
-                      })}
-                    </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-[11px] text-gray-400 mb-1">Tasks Today</p>
+                    <p className="text-2xl font-bold text-gray-900">{tasksToday}</p>
                   </div>
-                )}
+                  <div className={`rounded-lg p-3 ${overdueContent > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                    <p className="text-[11px] text-gray-400 mb-1">Overdue Content</p>
+                    <p className={`text-2xl font-bold ${overdueContent > 0 ? 'text-red-600' : 'text-gray-900'}`}>{overdueContent}</p>
+                  </div>
+                  <div className={`rounded-lg p-3 ${overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
+                    <p className="text-[11px] text-gray-400 mb-1">Overdue Tasks</p>
+                    <p className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-red-600' : 'text-gray-900'}`}>{overdueTasks}</p>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
