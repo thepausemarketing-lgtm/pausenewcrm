@@ -72,7 +72,7 @@ function SelectBadge({
   const opt = options.find(o => o.value === value)
   const label = opt?.label ?? value
   return (
-    <div className="relative inline-block">
+    <div className={`relative inline-block rounded-full ${!disabled ? 'hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer' : ''}`}>
       <span
         className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
         style={{ backgroundColor: color + '20', color }}
@@ -150,7 +150,7 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
       {/* Content Type */}
       {visibleCols.has('content_type') && (
         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
-          <div className="relative inline-block">
+          <div className="relative inline-block rounded-full hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer">
             <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
               {CONTENT_TYPES.find(t => t.value === item.content_type)?.label ?? item.content_type ?? '—'}
             </span>
@@ -203,9 +203,9 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
       {/* Design Date */}
       {visibleCols.has('design_date') && (
         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
-          <div className="relative inline-block">
+          <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <span className="text-xs text-gray-500">
-              {item.design_date ? format(parseISO(item.design_date), 'dd/MM/yyyy') : <span className="text-gray-300">—</span>}
+              {item.design_date ? format(parseISO(item.design_date), 'dd/MM/yyyy') : <span className="text-gray-400">Set date</span>}
             </span>
             <input
               type="date"
@@ -221,9 +221,9 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
       {/* Assignee */}
       {visibleCols.has('assignee') && (
         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
-          <div className="relative inline-block">
+          <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <span className="text-xs text-gray-500">
-              {item.assignee?.full_name ?? profiles.find(p => p.id === item.assigned_to)?.full_name ?? <span className="text-gray-300">—</span>}
+              {item.assignee?.full_name ?? profiles.find(p => p.id === item.assigned_to)?.full_name ?? <span className="text-gray-400">Assign</span>}
             </span>
             <select
               value={item.assigned_to ?? ''}
@@ -279,11 +279,11 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
       {/* Publish Date */}
       {visibleCols.has('publish_date') && (
         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
-          <div className="relative inline-block">
+          <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <span className="text-xs text-gray-500">
               {item.publish_at
                 ? new Date(item.publish_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                : <span className="text-gray-300">—</span>}
+                : <span className="text-gray-400">Set date</span>}
             </span>
             <input
               type="date"

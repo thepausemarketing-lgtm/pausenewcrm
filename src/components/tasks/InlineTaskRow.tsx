@@ -129,7 +129,7 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
 
       {/* Status — inline select styled as badge */}
       <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-        <div className="relative inline-block">
+        <div className="relative inline-block rounded-lg hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer">
           <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[task.status] ?? 'bg-gray-100 text-gray-600'}`}>
             {statusLabel}
           </span>
@@ -146,7 +146,7 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
 
       {/* Priority — inline select styled as badge */}
       <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-        <div className="relative inline-block">
+        <div className="relative inline-block rounded-lg hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer">
           <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium ${PRIORITY_COLORS[task.priority] ?? 'bg-gray-100 text-gray-600'}`}>
             {priorityLabel}
           </span>
@@ -163,9 +163,9 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
 
       {/* Due Date — transparent date input over display text */}
       <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-        <div className="relative inline-block">
+        <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
           <span className={`text-sm ${isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
-            {task.due_date ? formatDate(task.due_date) : <span className="text-gray-300">—</span>}
+            {task.due_date ? formatDate(task.due_date) : <span className="text-gray-400">Set date</span>}
             {isOverdue && <span className="ml-1">⚠</span>}
           </span>
           <input
@@ -180,8 +180,9 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
 
       {/* Assignee — inline select */}
       <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
-        <div className="relative inline-flex items-center gap-1.5">
+        <div className="relative inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
           <AssigneeStack assignees={task.task_assignees ?? []} size="xs" />
+          {!(task.task_assignees?.length) && <span className="text-xs text-gray-400">Assign</span>}
           <select
             value={task.assigned_to ?? ''}
             onChange={e => handleAssigneeChange(e.target.value)}

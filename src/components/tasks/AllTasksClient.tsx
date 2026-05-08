@@ -292,7 +292,7 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           />
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="bg-white overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
