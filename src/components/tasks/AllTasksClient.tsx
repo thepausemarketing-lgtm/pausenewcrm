@@ -314,7 +314,7 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
                     <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
                       <input
                         type="checkbox"
-                        className={`rounded border-gray-300 text-violet-600 focus:ring-violet-400 transition-opacity ${selectedIds.size > 0 ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
+                        className="rounded border-gray-300 text-violet-600 focus:ring-violet-400"
                         checked={selectedIds.has(task.id)}
                         onChange={e => {
                           const next = new Set(selectedIds)

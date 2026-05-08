@@ -120,34 +120,64 @@ export default async function DashboardPage() {
   }
 
   // Fetch tasks + content stats for team members
-  type TeamRow = { assigned_to: string; due_date: string | null; status: string }
+  // Tasks can be assigned via tasks.assigned_to OR task_assignees junction table — check both
+  type TeamRow = { id: string; due_date: string | null; status: string }
   type ContentRow = { assigned_to: string | null; publish_at: string | null; live_links: Record<string, string> | null }
+  type AssigneeRow = { task_id: string; user_id: string; task: { id: string; due_date: string | null; status: string } | null }
 
-  let rawTeamTasks: TeamRow[] = []
+  // Map: userId → Set of task ids
+  const personTaskMap: Record<string, Set<string>> = {}
+  // Map: taskId → task data
+  const taskDataMap: Record<string, TeamRow> = {}
+
   let rawTeamContent: ContentRow[] = []
 
   const today = new Date().toISOString().split('T')[0]
 
   if (teamMemberIds.length > 0) {
-    const [teamTasksRes, teamContentRes] = await Promise.all([
+    const [directTasksRes, junctionTasksRes, teamContentRes] = await Promise.all([
+      // Tasks assigned directly via assigned_to column
       supabase
         .from('tasks')
-        .select('assigned_to, due_date, status')
+        .select('id, assigned_to, due_date, status')
         .in('assigned_to', teamMemberIds)
         .not('status', 'in', '(done,cancelled)'),
+      // Tasks assigned via task_assignees junction table
+      (supabase as any)
+        .from('task_assignees')
+        .select('task_id, user_id, task:tasks!task_assignees_task_id_fkey(id, due_date, status)')
+        .in('user_id', teamMemberIds),
       supabase
         .from('content_items')
         .select('assigned_to, publish_at, live_links, status')
         .in('assigned_to', teamMemberIds)
         .not('status', 'in', '(cancelled)'),
     ])
-    rawTeamTasks = (teamTasksRes.data ?? []) as TeamRow[]
+
+    // Build direct task assignments
+    for (const t of (directTasksRes.data ?? []) as any[]) {
+      if (!['done', 'cancelled'].includes(t.status)) {
+        taskDataMap[t.id] = { id: t.id, due_date: t.due_date, status: t.status }
+        if (!personTaskMap[t.assigned_to]) personTaskMap[t.assigned_to] = new Set()
+        personTaskMap[t.assigned_to].add(t.id)
+      }
+    }
+
+    // Merge junction table assignments
+    for (const r of (junctionTasksRes.data ?? []) as AssigneeRow[]) {
+      if (!r.task || ['done', 'cancelled'].includes(r.task.status)) continue
+      taskDataMap[r.task_id] = { id: r.task_id, due_date: r.task.due_date, status: r.task.status }
+      if (!personTaskMap[r.user_id]) personTaskMap[r.user_id] = new Set()
+      personTaskMap[r.user_id].add(r.task_id)
+    }
+
     rawTeamContent = (teamContentRes.data ?? []) as ContentRow[]
   }
 
   // Compute per-person stats
   const teamByPerson = allProfiles.map(profile => {
-    const myTasks = rawTeamTasks.filter(t => t.assigned_to === profile.id)
+    const taskIds = Array.from(personTaskMap[profile.id] ?? [])
+    const myTasks = taskIds.map(id => taskDataMap[id]).filter(Boolean)
     const myContent = rawTeamContent.filter(c => c.assigned_to === profile.id)
 
     const tasksToday    = myTasks.filter(t => t.due_date === today).length
