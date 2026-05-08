@@ -160,7 +160,7 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto p-6">
       <PageHeader
         title="All Tasks"
         actions={

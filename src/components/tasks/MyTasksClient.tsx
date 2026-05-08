@@ -163,7 +163,7 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto p-6">
       <PageHeader
         title="My Tasks"
         description="Tasks assigned to you"
