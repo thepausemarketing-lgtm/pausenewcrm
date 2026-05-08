@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getVisibleUserIds } from '@/lib/supabase/helpers'
 import { formatDate, dueDateLabel } from '@/lib/utils'
 import { TASK_PRIORITIES, CONTENT_STATUSES, CLIENT_STATUSES } from '@/lib/constants'
 import Link from 'next/link'
@@ -34,6 +35,11 @@ export default async function DashboardPage() {
 
   if (!user) return null
 
+  // Get visible user IDs (self + subordinates, or null for admin)
+  const visibleIds = await getVisibleUserIds(supabase, user.id)
+  // Subordinates = visible IDs minus self
+  const subordinateIds = visibleIds ? visibleIds.filter(id => id !== user.id) : null
+
   const [stats, myTasksRes, upcomingContentRes, recentActivityRes, clientsRes] = await Promise.all([
     getStats(supabase),
     supabase
@@ -66,6 +72,62 @@ export default async function DashboardPage() {
   const upcomingContent = (upcomingContentRes.data ?? []) as ContentWithClient[]
   const recentActivity = (recentActivityRes.data ?? []) as ActivityWithActor[]
   const clients = clientsRes.data ?? []
+
+  // ── Team Overview ────────────────────────────────────────────────────────────
+  // For admins (visibleIds === null) show ALL active profiles except self
+  let teamMemberIds: string[] = []
+  let allProfiles: { id: string; full_name: string; avatar_url: string | null }[] = []
+
+  if (subordinateIds === null) {
+    // Admin: fetch all active profiles except self
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .eq('is_active', true)
+      .neq('id', user.id)
+    allProfiles = profiles ?? []
+    teamMemberIds = allProfiles.map(p => p.id)
+  } else if (subordinateIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url')
+      .in('id', subordinateIds)
+      .eq('is_active', true)
+    allProfiles = profiles ?? []
+    teamMemberIds = allProfiles.map(p => p.id)
+  }
+
+  // Fetch tasks + content for team members if any
+  let teamTasks: (TaskWithClient & { assigned_to: string })[] = []
+  let teamContent: (ContentWithClient & { assigned_to: string | null })[] = []
+
+  if (teamMemberIds.length > 0) {
+    const [teamTasksRes, teamContentRes] = await Promise.all([
+      supabase
+        .from('tasks')
+        .select('*, client:clients(name,slug)')
+        .in('assigned_to', teamMemberIds)
+        .not('status', 'in', '(done,cancelled)')
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(100),
+      supabase
+        .from('content_items')
+        .select('*, client:clients(name,slug)')
+        .in('assigned_to', teamMemberIds)
+        .gte('publish_at', new Date().toISOString())
+        .order('publish_at', { ascending: true })
+        .limit(100),
+    ])
+    teamTasks = (teamTasksRes.data ?? []) as any[]
+    teamContent = (teamContentRes.data ?? []) as any[]
+  }
+
+  // Group tasks + content by assignee
+  const teamByPerson = allProfiles.map(profile => ({
+    profile,
+    tasks: teamTasks.filter(t => t.assigned_to === profile.id).slice(0, 5),
+    content: teamContent.filter(c => c.assigned_to === profile.id).slice(0, 5),
+  })).filter(p => p.tasks.length > 0 || p.content.length > 0)
 
   const kpis = [
     { label: 'Active Clients', value: stats.activeClients ?? 0 },
@@ -169,6 +231,93 @@ export default async function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Team Overview — visible only if you have people below you */}
+      {teamByPerson.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-sm font-semibold text-gray-800">Team Overview</h2>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {teamByPerson.map(({ profile, tasks, content }) => (
+              <div key={profile.id} className="bg-white rounded-xl border border-gray-200 p-5">
+                {/* Person header */}
+                <div className="flex items-center gap-2.5 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 overflow-hidden">
+                    {profile.avatar_url
+                      ? <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
+                      : profile.full_name?.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="text-sm font-semibold text-gray-900">{profile.full_name}</p>
+                  <div className="ml-auto flex items-center gap-2">
+                    {tasks.length > 0 && (
+                      <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full font-medium">
+                        {tasks.length} task{tasks.length !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    {content.length > 0 && (
+                      <span className="text-xs bg-purple-50 text-purple-600 px-2 py-0.5 rounded-full font-medium">
+                        {content.length} content
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Tasks */}
+                {tasks.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Tasks</p>
+                    <div>
+                      {tasks.map((task) => {
+                        const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
+                        return (
+                          <Link key={task.id} href={`/app/tasks/${task.id}`}
+                            className="flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0 group">
+                            <div className="mt-1.5 w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: priority?.color ?? '#9ca3af' }} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-gray-800 group-hover:text-gray-900 truncate">{task.title}</p>
+                              <p className="text-[11px] text-gray-400">
+                                {dueDateLabel(task.due_date)}
+                                {task.client ? ` · ${task.client.name}` : ''}
+                              </p>
+                            </div>
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Content */}
+                {content.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Content</p>
+                    <div>
+                      {content.map((item) => {
+                        const status = CONTENT_STATUSES.find(s => s.value === item.status)
+                        return (
+                          <Link key={item.id} href={`/app/calendar/${item.id}`}
+                            className="flex items-center gap-2 py-1.5 border-b border-gray-50 last:border-0 group">
+                            <div className="min-w-0 flex-1">
+                              <p className="text-xs text-gray-800 group-hover:text-gray-900 truncate">{item.title}</p>
+                              <p className="text-[11px] text-gray-400">
+                                {item.publish_at ? formatDate(item.publish_at, 'dd/MM') : '—'}
+                                {item.client ? ` · ${item.client.name}` : ''}
+                              </p>
+                            </div>
+                            {status && <StatusBadge label={status.label} color={status.color} />}
+                          </Link>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Client Health Grid */}
       {clients.length > 0 && (
