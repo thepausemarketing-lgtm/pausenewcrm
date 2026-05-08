@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2, CheckCircle2, X, Trash2 } from 'lucide-react'
+import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, CheckCircle2, X, Trash2 } from 'lucide-react'
+import InlineTaskRow from './InlineTaskRow'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
@@ -281,92 +282,31 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
                     onChange={e => setSelectedIds(e.target.checked ? new Set(filtered.map(t => t.id)) : new Set())}
                   />
                 </th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Task</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Priority</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Due</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Assignees</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Client</th>
+                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Task</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Status</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Priority</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Due</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Assignees</th>
+                <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Client</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map(task => {
-                const priority = TASK_PRIORITIES.find(p => p.value === task.priority)!
-                const status = TASK_STATUSES.find(s => s.value === task.status)!
-                const isOverdue = task.due_date && task.due_date < today && !['done', 'cancelled'].includes(task.status)
-                return (
-                  <tr key={task.id} className={`hover:bg-gray-50 group cursor-pointer ${selectedIds.has(task.id) ? 'bg-violet-50/40' : ''}`} onClick={() => setSelectedTaskId(task.id)}>
-                    <td className="px-3 py-3" onClick={e => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-violet-600 focus:ring-violet-400"
-                        checked={selectedIds.has(task.id)}
-                        onChange={e => {
-                          const next = new Set(selectedIds)
-                          if (e.target.checked) next.add(task.id)
-                          else next.delete(task.id)
-                          setSelectedIds(next)
-                        }}
-                        onClick={e => e.stopPropagation()}
-                      />
-                    </td>
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      {editingId === task.id ? (
-                        <input
-                          autoFocus
-                          value={editingTitle}
-                          onChange={e => setEditingTitle(e.target.value)}
-                          onBlur={() => saveInlineEdit(task.id)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') saveInlineEdit(task.id)
-                            if (e.key === 'Escape') setEditingId(null)
-                          }}
-                          className="text-sm text-gray-800 border-b border-blue-400 outline-none bg-transparent w-full"
-                          onClick={e => e.stopPropagation()}
-                        />
-                      ) : (
-                        <div>
-                          <p
-                            className="font-medium text-gray-900 hover:text-violet-600 group-hover:text-violet-600 inline-flex items-center gap-1.5 text-left cursor-pointer"
-                            onDoubleClick={() => { setEditingId(task.id); setEditingTitle(task.title) }}
-                            onClick={() => setSelectedTaskId(task.id)}
-                          >
-                            {task.title}
-                            {task.recurrence_type && task.recurrence_type !== 'none' && (
-                              <Repeat2 size={11} className="text-violet-400 shrink-0" />
-                            )}
-                          </p>
-                          {task.description && (
-                            <p className="text-xs text-gray-400 mt-0.5 truncate max-w-xs">{task.description}</p>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge label={priority.label} color={priority.color} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge label={status.label} color={status.color} />
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={isOverdue ? 'text-red-500 font-medium' : 'text-gray-500'}>
-                        {task.due_date ? formatDate(task.due_date) : '—'}
-                        {isOverdue && ' ⚠'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <AssigneeStack assignees={task.task_assignees ?? []} size="xs" />
-                    </td>
-                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                      {task.client ? (
-                        <Link href={`/app/clients/${task.client.slug}`} className="text-gray-500 hover:text-gray-800">
-                          {task.client.name}
-                        </Link>
-                      ) : '—'}
-                    </td>
-                  </tr>
-                )
-              })}
+            <tbody>
+              {filtered.map(task => (
+                <InlineTaskRow
+                  key={task.id}
+                  task={task}
+                  profiles={profiles}
+                  selected={selectedIds.has(task.id)}
+                  onSelect={checked => {
+                    const next = new Set(selectedIds)
+                    if (checked) next.add(task.id); else next.delete(task.id)
+                    setSelectedIds(next)
+                  }}
+                  onOpenDrawer={id => setSelectedTaskId(id)}
+                  onUpdate={updated => setTasks(prev => prev.map(t => t.id === updated.id ? updated : t))}
+                  today={today}
+                />
+              ))}
             </tbody>
           </table>
         </div>
