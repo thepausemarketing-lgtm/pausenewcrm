@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
-import { Plus, LayoutGrid, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2 } from 'lucide-react'
+import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, Repeat2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
@@ -12,6 +12,7 @@ import PageHeader from '@/components/shared/PageHeader'
 import NewTaskModal from './NewTaskModal'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import AssigneeStack from '@/components/shared/AssigneeStack'
+import TaskViewToggle from './TaskViewToggle'
 import type { TaskWithAssignees } from '@/app/(app)/app/tasks/page'
 
 type DateFilter = 'all' | 'today' | 'tomorrow' | 'overdue' | 'custom'
@@ -118,19 +119,16 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
       <PageHeader
         title="All Tasks"
         actions={
-          <div className="flex gap-2">
-            <Link href="/app/tasks"><Button variant="outline" size="sm">My Tasks</Button></Link>
-            <Link href="/app/tasks/board">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <LayoutGrid size={14} /> Board
+          <div className="flex items-center gap-3">
+            <TaskViewToggle />
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadCSV}>
+                <Download size={14} /> Export
               </Button>
-            </Link>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadCSV}>
-              <Download size={14} /> Export
-            </Button>
-            <Button size="sm" className="gap-1.5" onClick={() => setNewTaskOpen(true)}>
-              <Plus size={14} /> New Task
-            </Button>
+              <Button size="sm" className="gap-1.5" onClick={() => setNewTaskOpen(true)}>
+                <Plus size={14} /> New Task
+              </Button>
+            </div>
           </div>
         }
       />

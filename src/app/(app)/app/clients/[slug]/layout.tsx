@@ -7,13 +7,9 @@ import { formatCurrency } from '@/lib/utils'
 
 const TABS = [
   { href: '', label: 'Overview' },
-  { href: '/contacts', label: 'Contacts' },
-  { href: '/logins', label: 'Logins' },
-  { href: '/renewals', label: 'Renewals' },
-  { href: '/campaigns', label: 'Campaigns' },
-  { href: '/calendar', label: 'Calendar' },
+  { href: '/calendar', label: 'Content' },
   { href: '/tasks', label: 'Tasks' },
-  { href: '/social', label: 'Social' },
+  { href: '/details', label: 'Details' },
   { href: '/files', label: 'Files' },
   { href: '/activity', label: 'Activity' },
 ]

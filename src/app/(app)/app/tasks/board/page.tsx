@@ -2,9 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getVisibleUserIds } from '@/lib/supabase/helpers'
 import KanbanBoard from '@/components/tasks/KanbanBoard'
 import PageHeader from '@/components/shared/PageHeader'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { List } from 'lucide-react'
+import TaskViewToggle from '@/components/tasks/TaskViewToggle'
 
 export default async function TaskBoardPage() {
   const supabase = await createClient()
@@ -50,11 +48,7 @@ export default async function TaskBoardPage() {
     <div className="h-full flex flex-col px-6 pt-6">
       <PageHeader
         title="Task Board"
-        actions={
-          <div className="flex gap-2">
-            <Link href="/app/tasks"><Button variant="outline" size="sm" className="gap-1.5"><List size={14} /> List</Button></Link>
-          </div>
-        }
+        actions={<TaskViewToggle />}
       />
       <KanbanBoard
         initialTasks={tasks ?? []}

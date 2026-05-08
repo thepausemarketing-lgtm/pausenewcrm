@@ -53,6 +53,7 @@ export default async function DashboardPage() {
       .from('content_items')
       .select('*, client:clients(name,slug)')
       .gte('publish_at', new Date().toISOString())
+      .in('status', ['approved', 'scheduled', 'published'])
       .order('publish_at', { ascending: true })
       .limit(7),
     supabase
@@ -72,6 +73,27 @@ export default async function DashboardPage() {
   const upcomingContent = (upcomingContentRes.data ?? []) as ContentWithClient[]
   const recentActivity = (recentActivityRes.data ?? []) as ActivityWithActor[]
   const clients = clientsRes.data ?? []
+
+  // Content Pipeline counts
+  const { data: pipelineData } = await supabase
+    .from('content_items')
+    .select('status')
+    .not('status', 'eq', 'cancelled')
+
+  const pipelineStatuses = ['draft', 'in_review', 'approved', 'scheduled', 'published'] as const
+  type PipelineStatus = typeof pipelineStatuses[number]
+  const pipelineCounts = pipelineStatuses.reduce<Record<PipelineStatus, number>>((acc, s) => {
+    acc[s] = (pipelineData ?? []).filter((item: { status: string }) => item.status === s).length
+    return acc
+  }, { draft: 0, in_review: 0, approved: 0, scheduled: 0, published: 0 })
+
+  const pipelineItems: { key: PipelineStatus; label: string; colorClass: string; bgHighlight: string }[] = [
+    { key: 'draft',     label: 'Draft',      colorClass: 'text-gray-600',  bgHighlight: 'bg-gray-50' },
+    { key: 'in_review', label: 'In Review',  colorClass: 'text-yellow-600', bgHighlight: 'bg-yellow-50' },
+    { key: 'approved',  label: 'Approved',   colorClass: 'text-blue-600',  bgHighlight: 'bg-blue-50' },
+    { key: 'scheduled', label: 'Scheduled',  colorClass: 'text-purple-600', bgHighlight: 'bg-purple-50' },
+    { key: 'published', label: 'Published',  colorClass: 'text-green-600', bgHighlight: 'bg-green-50' },
+  ]
 
   // ── Team Overview ────────────────────────────────────────────────────────────
   // For admins (visibleIds === null) show ALL active profiles except self
@@ -141,21 +163,21 @@ export default async function DashboardPage() {
   })
 
   const kpis = [
-    { label: 'Active Clients', value: stats.activeClients ?? 0 },
-    { label: 'Tasks Due Today', value: stats.tasksDueToday ?? 0 },
-    { label: 'Content This Week', value: stats.contentThisWeek ?? 0 },
-    { label: 'Overdue Tasks', value: stats.overdueTasks ?? 0 },
+    { label: 'Active Clients', value: stats.activeClients ?? 0, href: '/app/clients?status=active' },
+    { label: 'Tasks Due Today', value: stats.tasksDueToday ?? 0, href: '/app/tasks?date=today' },
+    { label: 'Content This Week', value: stats.contentThisWeek ?? 0, href: '/app/calendar' },
+    { label: 'Overdue Tasks', value: stats.overdueTasks ?? 0, href: '/app/tasks?date=overdue' },
   ]
 
   return (
     <div className="p-6">
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {kpis.map(({ label, value }) => (
-          <div key={label} className="bg-white rounded-xl border border-gray-200 p-6">
+        {kpis.map(({ label, value, href }) => (
+          <Link key={label} href={href} className="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer block">
             <p className="text-sm text-gray-500 mb-3">{label}</p>
             <p className="text-4xl font-bold text-gray-900">{value}</p>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -240,6 +262,29 @@ export default async function DashboardPage() {
               ))}
             </div>
           )}
+        </div>
+      </div>
+
+      {/* Content Pipeline */}
+      <div className="mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-800 mb-4">Content Pipeline</h3>
+          <div className="grid grid-cols-5 gap-3">
+            {pipelineItems.map(({ key, label, colorClass, bgHighlight }) => {
+              const count = pipelineCounts[key]
+              const highlight = (key === 'in_review' || key === 'approved') && count > 0
+              return (
+                <Link
+                  key={key}
+                  href={`/app/calendar?status=${key}`}
+                  className={`rounded-lg p-4 text-center hover:opacity-80 transition-all cursor-pointer ${highlight ? bgHighlight : 'bg-gray-50'}`}
+                >
+                  <p className={`text-3xl font-bold ${colorClass}`}>{count}</p>
+                  <p className="text-xs text-gray-500 mt-1">{label}</p>
+                </Link>
+              )
+            })}
+          </div>
         </div>
       </div>
 
