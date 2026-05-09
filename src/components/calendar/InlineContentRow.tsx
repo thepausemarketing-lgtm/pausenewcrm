@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { format, parseISO } from 'date-fns'
 import { PLATFORMS, CONTENT_TYPES, CONTENT_STATUSES } from '@/lib/constants'
+import AssigneeStack from '@/components/shared/AssigneeStack'
 import type { ContentItem } from '@/types/database.types'
 
 type ContentAssigneeRef = {
@@ -227,10 +228,12 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
       {/* Assignee */}
       {visibleCols.has('assignee') && (
         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
-          <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-            <span className="text-xs text-gray-500">
-              {item.assignee?.full_name ?? profiles.find(p => p.id === item.assigned_to)?.full_name ?? <span className="text-gray-400">Assign</span>}
-            </span>
+          <div className="relative inline-flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
+            {item.content_assignees && item.content_assignees.length > 0 ? (
+              <AssigneeStack assignees={item.content_assignees} size="xs" />
+            ) : (
+              <span className="text-xs text-gray-400">Assign</span>
+            )}
             <select
               value={item.assigned_to ?? ''}
               onChange={e => patch('assigned_to', e.target.value || null)}
