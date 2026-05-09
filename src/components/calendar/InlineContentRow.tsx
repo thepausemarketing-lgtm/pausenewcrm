@@ -5,9 +5,15 @@ import { format, parseISO } from 'date-fns'
 import { PLATFORMS, CONTENT_TYPES, CONTENT_STATUSES } from '@/lib/constants'
 import type { ContentItem } from '@/types/database.types'
 
+type ContentAssigneeRef = {
+  user_id: string
+  user: { id: string; full_name: string; avatar_url: string | null } | null
+}
+
 type ItemWithRelations = ContentItem & {
   client?: { name: string; slug: string; id: string } | null
   assignee?: { full_name: string } | null
+  content_assignees?: ContentAssigneeRef[]
 }
 
 interface Props {

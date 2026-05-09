@@ -196,7 +196,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
       const { data: rawData, error } = await supabase
         .from('content_items')
         .insert({ ...payload, client_id: clientId, created_by: profile.id })
-        .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name)')
+        .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
         .single()
       const data = rawData as ItemWithRelations | null
       if (error) {
@@ -237,7 +237,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
         .from('content_items')
         .update(payload)
         .eq('id', item.id)
-        .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name)')
+        .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
         .single()
       if (error) {
         setSaveError(error.message)
