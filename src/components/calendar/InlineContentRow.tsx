@@ -290,9 +290,12 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
         <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
           <div className="relative inline-block px-2 py-1 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
             <span className="text-xs text-gray-500">
-              {item.publish_at
-                ? new Date(item.publish_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })
-                : <span className="text-gray-400">Set date</span>}
+              {item.publish_at ? (
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-400">{format(new Date(item.publish_at), 'EEE')}</span>
+                  {new Date(item.publish_at).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                </span>
+              ) : <span className="text-gray-400">Set date</span>}
             </span>
             <input
               type="date"
