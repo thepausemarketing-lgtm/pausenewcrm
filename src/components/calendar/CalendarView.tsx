@@ -109,6 +109,11 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
+  // Local filter state — instant, no router.push
+  const [localClient, setLocalClient] = useState(filters.client ?? '')
+  const [localPlatform, setLocalPlatform] = useState(filters.platform ?? '')
+  const [localStatus, setLocalStatus] = useState(filters.status ?? '')
+  const [localAssignee, setLocalAssignee] = useState(filters.assignee ?? '')
   const colPickerRef = useRef<HTMLDivElement>(null)
 
   const today = toLocalDate(new Date())
@@ -250,13 +255,19 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
         }); break
       default: filtered = [...items]
     }
+    // Apply local filters (instant, no server round-trip)
+    if (localClient)   filtered = filtered.filter(i => i.client_id === localClient)
+    if (localPlatform) filtered = filtered.filter(i => i.platforms?.includes(localPlatform as any) || i.platform === localPlatform)
+    if (localStatus)   filtered = filtered.filter(i => i.status === localStatus)
+    if (localAssignee) filtered = filtered.filter(i => i.assigned_to === localAssignee || i.content_assignees?.some((a: any) => a.user_id === localAssignee))
+
     // Always sort ascending by publish date
     return filtered.sort((a, b) => {
       const da = a.publish_at ?? ''
       const db = b.publish_at ?? ''
       return da < db ? -1 : da > db ? 1 : 0
     })
-  }, [items, dateFilter, today, tomorrow, customFrom, customTo])
+  }, [items, dateFilter, today, tomorrow, customFrom, customTo, localClient, localPlatform, localStatus, localAssignee])
 
   const dateCounts: Record<DateFilter, number> = {
     all:      items.length,
@@ -266,7 +277,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
     custom:   dateFilter === 'custom' ? listItems.length : 0,
   }
 
-  const activeFilterCount = [filters.client, filters.platform, filters.status, filters.assignee].filter(Boolean).length
+  const activeFilterCount = [localClient, localPlatform, localStatus, localAssignee].filter(Boolean).length
 
   return (
     <div className="flex flex-col">
@@ -358,32 +369,32 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
         </div>
       </div>
 
-      {/* ── Row 2: Filter bar (collapsible) ── */}
+      {/* ── Row 2: Filter bar (collapsible, instant local filtering) ── */}
       {filterOpen && (
         <div className="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex-wrap">
-          <select value={filters.client ?? ''} onChange={e => filterNav('client', e.target.value)}
+          <select value={localClient} onChange={e => setLocalClient(e.target.value)}
             className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
             <option value="">All clients</option>
             {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
-          <select value={filters.platform ?? ''} onChange={e => filterNav('platform', e.target.value)}
+          <select value={localPlatform} onChange={e => setLocalPlatform(e.target.value)}
             className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
             <option value="">All platforms</option>
             {PLATFORMS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
           </select>
-          <select value={filters.status ?? ''} onChange={e => filterNav('status', e.target.value)}
+          <select value={localStatus} onChange={e => setLocalStatus(e.target.value)}
             className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
             <option value="">All statuses</option>
             {CONTENT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
-          <select value={filters.assignee ?? ''} onChange={e => filterNav('assignee', e.target.value)}
+          <select value={localAssignee} onChange={e => setLocalAssignee(e.target.value)}
             className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
             <option value="">All assignees</option>
             {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
           </select>
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { filterNav('client', ''); filterNav('platform', ''); filterNav('status', ''); filterNav('assignee', '') }}
+              onClick={() => { setLocalClient(''); setLocalPlatform(''); setLocalStatus(''); setLocalAssignee('') }}
               className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-700 ml-1"
             >
               <X size={11} /> Clear all

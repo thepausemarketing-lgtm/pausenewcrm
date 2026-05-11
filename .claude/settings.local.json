@@ -34,7 +34,9 @@
       "Bash(pnpm build *)",
       "WebSearch",
       "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); [print\\(k,v\\) for k,v in {**d.get\\('dependencies',{}\\), **d.get\\('devDependencies',{}\\)}.items\\(\\)]\")",
-      "Bash(xargs ls)"
+      "Bash(xargs ls)",
+      "Bash(npx supabase *)",
+      "Bash(cat ~/.supabase/access-token 2>/dev/null || echo \"no token found\")"
     ]
   }
 }

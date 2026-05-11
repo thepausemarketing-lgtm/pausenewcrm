@@ -21,7 +21,7 @@ interface Props {
 const STATUS_DOT: Record<string, string> = {
   todo:        'bg-gray-300',
   in_progress: 'bg-blue-500',
-  in_review:   'bg-amber-400',
+  review:      'bg-amber-400',
   done:        'bg-green-500',
   cancelled:   'bg-red-400',
 }
@@ -91,17 +91,11 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
       {/* Title — with status circle on the left */}
       <td className="px-2 py-2.5 min-w-0" onClick={e => e.stopPropagation()}>
         <div className="flex items-center gap-2">
-          {/* Status circle */}
-          <div className="relative shrink-0" title="Change status">
-            <span className={`block w-3 h-3 rounded-full border-2 border-white ring-1 ring-gray-200 cursor-pointer transition-transform hover:scale-125 ${STATUS_DOT[task.status] ?? 'bg-gray-300'}`} />
-            <select
-              value={task.status}
-              onChange={e => handleStatusChange(e.target.value)}
-              className="absolute inset-0 opacity-0 cursor-pointer w-full"
-            >
-              {TASK_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
+          {/* Status dot — visual indicator only */}
+          <span
+            className={`block w-2.5 h-2.5 rounded-full shrink-0 ${STATUS_DOT[task.status] ?? 'bg-gray-300'}`}
+            title={TASK_STATUSES.find(s => s.value === task.status)?.label}
+          />
 
           {/* Title text */}
           {editingTitle ? (
@@ -131,6 +125,30 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
               )}
             </div>
           )}
+        </div>
+      </td>
+
+      {/* Status badge column */}
+      <td className="px-2 py-2.5" onClick={e => e.stopPropagation()}>
+        <div className="relative inline-block rounded-lg hover:ring-2 hover:ring-gray-200 transition-all cursor-pointer">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium ${
+            task.status === 'todo'        ? 'bg-gray-100 text-gray-600' :
+            task.status === 'in_progress' ? 'bg-blue-50 text-blue-700' :
+            task.status === 'review'      ? 'bg-amber-50 text-amber-700' :
+            task.status === 'done'        ? 'bg-green-50 text-green-700' :
+            task.status === 'cancelled'   ? 'bg-red-50 text-red-600' :
+            'bg-gray-100 text-gray-600'
+          }`}>
+            {TASK_STATUSES.find(s => s.value === task.status)?.label ?? task.status}
+          </span>
+          <select
+            value={task.status}
+            onChange={e => handleStatusChange(e.target.value)}
+            className="absolute inset-0 opacity-0 cursor-pointer w-full"
+            title="Change status"
+          >
+            {TASK_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
         </div>
       </td>
 

@@ -302,7 +302,8 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
                   />
                 </th>
                 <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Task</th>
-                <th className="px-2 py-2.5 w-10" />
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Status</th>
+                <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide w-10">Pri</th>
                 <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Due</th>
                 <th className="text-left px-2 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Assignee</th>
                 <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-400 uppercase tracking-wide">Client</th>
