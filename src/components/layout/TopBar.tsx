@@ -267,7 +267,7 @@ export default function TopBar() {
   }, [])
 
   return (
-    <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 relative">
+    <header className="h-12 bg-white/80 backdrop-blur border-b border-violet-100/60 flex items-center justify-between px-6 shrink-0 relative">
       <div className="flex items-center gap-2">
         {/* Hamburger button: only visible on mobile */}
         <button

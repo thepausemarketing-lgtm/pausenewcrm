@@ -210,7 +210,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-6">
       {/* Greeting Banner */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-6 mb-6">
+      <div className="bg-white rounded-2xl shadow-sm px-8 py-6 mb-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div>
             <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-tight">
@@ -238,25 +238,28 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        {/* My Tasks */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+      {/* 3-col cards row — My Tasks (wide) + Upcoming Content + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+
+        {/* My Tasks — wider (2 cols) */}
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-gray-800">My Tasks</h3>
-            <Link href="/app/tasks" className="text-xs text-gray-400 hover:text-gray-600">View all</Link>
+            <h3 className="text-sm font-semibold text-slate-800">My Tasks</h3>
+            <Link href="/app/tasks" className="text-xs text-slate-400 hover:text-violet-600 transition-colors">View all →</Link>
           </div>
           {myTasks.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No pending tasks</p>
+            <p className="text-sm text-slate-400 text-center py-10">No pending tasks 🎉</p>
           ) : (
-            <div>
+            <div className="space-y-0">
               {myTasks.map((task) => {
                 const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
                 return (
-                  <Link key={task.id} href={`/app/tasks/${task.id}`} className="flex items-start gap-2.5 py-2 border-b border-gray-50 last:border-0 group">
-                    <div className="mt-1.5 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
+                  <Link key={task.id} href={`/app/tasks/${task.id}`}
+                    className="flex items-start gap-3 py-2.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/60 -mx-2 px-2 rounded-lg transition-colors">
+                    <div className="mt-2 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-gray-800 group-hover:text-gray-900 truncate">{task.title}</p>
-                      <p className="text-xs text-gray-400">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
+                      <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{task.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
                     </div>
                   </Link>
                 )
@@ -266,22 +269,23 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming Content */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-gray-800">Upcoming Content</h3>
-            <Link href="/app/calendar" className="text-xs text-gray-400 hover:text-gray-600">View all</Link>
+            <h3 className="text-sm font-semibold text-slate-800">Upcoming Content</h3>
+            <Link href="/app/calendar" className="text-xs text-slate-400 hover:text-violet-600 transition-colors">View all →</Link>
           </div>
           {upcomingContent.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No scheduled content</p>
+            <p className="text-sm text-slate-400 text-center py-10">No scheduled content</p>
           ) : (
-            <div>
+            <div className="space-y-0">
               {upcomingContent.map((item) => {
                 const status = CONTENT_STATUSES.find(s => s.value === item.status)
                 return (
-                  <Link key={item.id} href={`/app/calendar/${item.id}`} className="flex items-center gap-2.5 py-2 border-b border-gray-50 last:border-0 group">
+                  <Link key={item.id} href={`/app/calendar/${item.id}`}
+                    className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/60 -mx-2 px-2 rounded-lg transition-colors">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-800 group-hover:text-gray-900 truncate">{item.title}</p>
-                      <p className="text-xs text-gray-400">
+                      <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{item.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">
                         {item.publish_at ? formatDate(item.publish_at, 'dd/MM') : '—'}
                         {item.client ? ` · ${item.client.name}` : ''}
                       </p>
@@ -294,25 +298,23 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-gray-800">Recent Activity</h3>
-          </div>
+        {/* Recent Activity — narrow (1 col) */}
+        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm p-6">
+          <h3 className="text-sm font-semibold text-slate-800 mb-5">Activity</h3>
           {recentActivity.length === 0 ? (
-            <p className="text-sm text-gray-400 text-center py-8">No activity yet</p>
+            <p className="text-sm text-slate-400 text-center py-10">No activity yet</p>
           ) : (
-            <div>
+            <div className="space-y-0">
               {recentActivity.slice(0, 8).map((log) => (
-                <div key={log.id} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                <div key={log.id} className="flex gap-2.5 py-2.5 border-b border-slate-50 last:border-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-violet-300 mt-2 shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-700 leading-snug">
-                      <span className="font-medium">{log.actor?.full_name ?? 'Someone'}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs text-slate-700 leading-snug">
+                      <span className="font-semibold">{log.actor?.full_name?.split(' ')[0] ?? 'Someone'}</span>
                       {' '}{log.action.replace(/_/g, ' ')}
                     </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    <p className="text-[10px] text-slate-400 mt-0.5">
+                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                     </p>
                   </div>
                 </div>
@@ -323,9 +325,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Content Pipeline */}
-      <div className="mb-6">
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-800 mb-4">Content Pipeline</h3>
+      <div className="mb-5">
+        <div className="bg-white rounded-2xl shadow-sm p-6">
+          <h3 className="text-sm font-semibold text-slate-800 mb-5">Content Pipeline</h3>
           <div className="grid grid-cols-5 gap-3">
             {pipelineItems.map(({ key, label, numColor, bg, dotColor }) => {
               const count = pipelineCounts[key]
@@ -333,11 +335,11 @@ export default async function DashboardPage() {
                 <Link
                   key={key}
                   href={`/app/calendar?status=${key}`}
-                  className={`rounded-xl p-4 text-center hover:opacity-90 hover:shadow-sm transition-all cursor-pointer ${bg} group`}
+                  className={`rounded-xl p-4 text-center hover:shadow-sm transition-all cursor-pointer ${bg} group`}
                 >
                   <div className="flex items-center justify-center gap-1.5 mb-2">
                     <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                    <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
                   </div>
                   <p className={`text-3xl font-bold ${numColor}`}>{count}</p>
                 </Link>
@@ -347,43 +349,40 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Team Overview — visible only if you have people below you */}
+      {/* Team Overview */}
       {teamByPerson.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-5">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-sm font-semibold text-gray-800">Team Overview</h2>
-            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
+            <h2 className="text-sm font-semibold text-slate-800">Team Overview</h2>
+            <span className="text-xs bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full font-medium">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }) => (
-              <div key={profile.id} className="bg-white rounded-xl border border-gray-200 p-5">
-                {/* Person header */}
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 overflow-hidden">
+              <div key={profile.id} className="bg-white rounded-2xl shadow-sm p-6">
+                <div className="flex items-center gap-3 mb-5">
+                  <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0 overflow-hidden">
                     {profile.avatar_url
                       ? <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                       : profile.full_name?.charAt(0).toUpperCase()}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900">{profile.full_name}</p>
+                  <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
                 </div>
-
-                {/* 4 stat tiles */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-violet-50 rounded-lg p-3">
-                    <p className="text-[11px] text-violet-400 mb-1 font-medium uppercase tracking-wide">Content Today</p>
+                  <div className="bg-violet-50 rounded-xl p-3">
+                    <p className="text-[10px] text-violet-400 mb-1.5 font-semibold uppercase tracking-wider">Content</p>
                     <p className="text-2xl font-bold text-violet-700">{contentToday}</p>
                   </div>
-                  <div className="bg-amber-50 rounded-lg p-3">
-                    <p className="text-[11px] text-amber-400 mb-1 font-medium uppercase tracking-wide">Tasks Today</p>
+                  <div className="bg-amber-50 rounded-xl p-3">
+                    <p className="text-[10px] text-amber-400 mb-1.5 font-semibold uppercase tracking-wider">Tasks</p>
                     <p className="text-2xl font-bold text-amber-700">{tasksToday}</p>
                   </div>
-                  <div className={`rounded-lg p-3 ${overdueContent > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className={`text-[11px] mb-1 font-medium uppercase tracking-wide ${overdueContent > 0 ? 'text-red-400' : 'text-gray-400'}`}>Overdue Content</p>
-                    <p className={`text-2xl font-bold ${overdueContent > 0 ? 'text-red-600' : 'text-gray-500'}`}>{overdueContent}</p>
+                  <div className={`rounded-xl p-3 ${overdueContent > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+                    <p className={`text-[10px] mb-1.5 font-semibold uppercase tracking-wider ${overdueContent > 0 ? 'text-red-400' : 'text-slate-400'}`}>Late Content</p>
+                    <p className={`text-2xl font-bold ${overdueContent > 0 ? 'text-red-600' : 'text-slate-400'}`}>{overdueContent}</p>
                   </div>
-                  <div className={`rounded-lg p-3 ${overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className={`text-[11px] mb-1 font-medium uppercase tracking-wide ${overdueTasks > 0 ? 'text-red-400' : 'text-gray-400'}`}>Overdue Tasks</p>
-                    <p className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-red-600' : 'text-gray-500'}`}>{overdueTasks}</p>
+                  <div className={`rounded-xl p-3 ${overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
+                    <p className={`text-[10px] mb-1.5 font-semibold uppercase tracking-wider ${overdueTasks > 0 ? 'text-red-400' : 'text-slate-400'}`}>Late Tasks</p>
+                    <p className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-red-600' : 'text-slate-400'}`}>{overdueTasks}</p>
                   </div>
                 </div>
               </div>
@@ -394,21 +393,21 @@ export default async function DashboardPage() {
 
       {/* Client Health Grid */}
       {clients.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h3 className="text-sm font-semibold text-gray-800 mb-5">Client Health</h3>
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-5">
+          <h3 className="text-sm font-semibold text-slate-800 mb-5">Client Health</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {clients.map((client) => {
               const statusDef = CLIENT_STATUSES.find(s => s.value === client.status)
               return (
                 <Link key={client.id} href={`/app/clients/${client.slug}`}
-                  className="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition-colors">
-                  <p className="text-sm font-medium text-gray-900 truncate">{client.name}</p>
-                  <div className="flex items-center justify-between mt-2">
+                  className="bg-slate-50 hover:bg-violet-50 rounded-xl p-4 transition-colors group">
+                  <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-violet-700">{client.name}</p>
+                  <div className="flex items-center justify-between mt-3">
                     {statusDef && <StatusBadge label={statusDef.label} color={statusDef.color} />}
                     {client.health_score && (
                       <div className="flex gap-0.5">
                         {[1, 2, 3, 4, 5].map(i => (
-                          <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-green-400' : 'bg-gray-100'}`} />
+                          <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-lime-400' : 'bg-slate-200'}`} />
                         ))}
                       </div>
                     )}
