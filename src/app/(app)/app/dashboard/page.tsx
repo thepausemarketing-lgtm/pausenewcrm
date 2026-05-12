@@ -207,8 +207,8 @@ export default async function DashboardPage() {
     { label: 'Overdue items',     value: stats.overdueTasks ?? 0,    href: '/app/tasks?date=overdue',    warn: (stats.overdueTasks ?? 0) > 0 },
   ]
 
-  // Card style — frosted glass so it lifts off the gray bg
-  const card = 'bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm p-6'
+  // Card style — frosted glass: semi-transparent so gradient bleeds through
+  const card = 'bg-white/55 backdrop-blur-xl rounded-2xl border border-white/70 shadow-[0_4px_24px_rgba(0,0,0,0.06)] p-6'
 
   return (
     <div className="p-6 bg-white min-h-full">

@@ -70,7 +70,7 @@ export default function TopNav() {
   return (
     <>
       {/* Top Nav Bar */}
-      <header className="h-14 bg-white flex items-center px-6 shrink-0 border-b border-gray-100">
+      <header className="h-14 bg-white/60 backdrop-blur-xl flex items-center px-6 shrink-0 border-b border-white/50">
 
         {/* Logo */}
         <Link href="/app/dashboard" className="flex items-center gap-2 mr-8 shrink-0">
