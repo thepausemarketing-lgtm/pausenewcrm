@@ -102,26 +102,26 @@ export default function DashboardTabs({
         <p className="text-sm text-gray-400 mt-1.5">{todayLabel}</p>
       </div>
 
-      {/* ── Unified Card: Tab bar + content ─────────────────────────────────── */}
-      <div className={`${card} p-0 overflow-hidden`}>
+      {/* ── Tab bar — floats above, active tab merges into card below ───────── */}
+      <div className="flex justify-center gap-0.5 relative z-10">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all relative ${
+              activeTab === id
+                ? 'bg-white/55 backdrop-blur-xl border-t border-l border-r border-white/70 rounded-t-xl -mb-px text-gray-900 shadow-[0_-2px_12px_rgba(0,0,0,0.03)]'
+                : 'text-gray-400 hover:text-gray-700 rounded-t-xl hover:bg-white/30'
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
 
-        {/* Tab bar — centered, sits inside the card as its header */}
-        <div className="flex justify-center gap-1 px-6 py-3 border-b border-white/50">
-          {TABS.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-xl transition-all ${
-                activeTab === id
-                  ? 'bg-gray-900 text-white shadow-sm'
-                  : 'text-gray-400 hover:text-gray-700 hover:bg-white/50'
-              }`}
-            >
-              <Icon size={14} />
-              {label}
-            </button>
-          ))}
-        </div>
+      {/* ── Card — connects seamlessly with active tab above ─────────────────── */}
+      <div className={`${card} p-0 overflow-hidden relative z-0`}>
 
         {/* Tab panels */}
         <div>
