@@ -5,6 +5,7 @@ import { TASK_PRIORITIES, CONTENT_STATUSES, CLIENT_STATUSES } from '@/lib/consta
 import Link from 'next/link'
 import StatusBadge from '@/components/shared/StatusBadge'
 import type { Task, ContentItem, ActivityLog } from '@/types/database.types'
+import { Building2, ListTodo, CalendarDays, AlertTriangle, Plus, FileText, CheckCheck, Trash2 } from 'lucide-react'
 
 type TaskWithClient = Task & { client?: { name: string; slug: string } | null }
 type ContentWithClient = ContentItem & { client?: { name: string; slug: string } | null }
@@ -87,12 +88,12 @@ export default async function DashboardPage() {
     return acc
   }, { draft: 0, in_review: 0, approved: 0, scheduled: 0, published: 0 })
 
-  const pipelineItems: { key: PipelineStatus; label: string; colorClass: string; bgHighlight: string }[] = [
-    { key: 'draft',     label: 'Draft',      colorClass: 'text-gray-600',  bgHighlight: 'bg-gray-50' },
-    { key: 'in_review', label: 'In Review',  colorClass: 'text-yellow-600', bgHighlight: 'bg-yellow-50' },
-    { key: 'approved',  label: 'Approved',   colorClass: 'text-blue-600',  bgHighlight: 'bg-blue-50' },
-    { key: 'scheduled', label: 'Scheduled',  colorClass: 'text-purple-600', bgHighlight: 'bg-purple-50' },
-    { key: 'published', label: 'Published',  colorClass: 'text-green-600', bgHighlight: 'bg-green-50' },
+  const pipelineItems: { key: PipelineStatus; label: string; numColor: string; bg: string; dotColor: string }[] = [
+    { key: 'draft',     label: 'Draft',      numColor: 'text-gray-700',    bg: 'bg-gray-50',    dotColor: 'bg-gray-300' },
+    { key: 'in_review', label: 'In Review',  numColor: 'text-amber-700',   bg: 'bg-amber-50',   dotColor: 'bg-amber-400' },
+    { key: 'approved',  label: 'Approved',   numColor: 'text-blue-700',    bg: 'bg-blue-50',    dotColor: 'bg-blue-500' },
+    { key: 'scheduled', label: 'Scheduled',  numColor: 'text-violet-700',  bg: 'bg-violet-50',  dotColor: 'bg-violet-500' },
+    { key: 'published', label: 'Published',  numColor: 'text-green-700',   bg: 'bg-green-50',   dotColor: 'bg-green-500' },
   ]
 
   // ── Team Overview ────────────────────────────────────────────────────────────
@@ -193,20 +194,65 @@ export default async function DashboardPage() {
   })
 
   const kpis = [
-    { label: 'Active Clients', value: stats.activeClients ?? 0, href: '/app/clients?status=active' },
-    { label: 'Tasks Due Today', value: stats.tasksDueToday ?? 0, href: '/app/tasks?date=today' },
-    { label: 'Content This Week', value: stats.contentThisWeek ?? 0, href: '/app/calendar' },
-    { label: 'Overdue Tasks', value: stats.overdueTasks ?? 0, href: '/app/tasks?date=overdue' },
+    {
+      label: 'Active Clients',
+      value: stats.activeClients ?? 0,
+      href: '/app/clients?status=active',
+      Icon: Building2,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-blue-500',
+      topBorder: 'border-t-blue-500',
+      numColor: 'text-blue-600',
+    },
+    {
+      label: 'Tasks Due Today',
+      value: stats.tasksDueToday ?? 0,
+      href: '/app/tasks?date=today',
+      Icon: ListTodo,
+      iconBg: 'bg-amber-50',
+      iconColor: 'text-amber-500',
+      topBorder: 'border-t-amber-400',
+      numColor: 'text-amber-600',
+    },
+    {
+      label: 'Content This Week',
+      value: stats.contentThisWeek ?? 0,
+      href: '/app/calendar',
+      Icon: CalendarDays,
+      iconBg: 'bg-violet-50',
+      iconColor: 'text-violet-500',
+      topBorder: 'border-t-violet-500',
+      numColor: 'text-violet-600',
+    },
+    {
+      label: 'Overdue Items',
+      value: stats.overdueTasks ?? 0,
+      href: '/app/tasks?date=overdue',
+      Icon: AlertTriangle,
+      iconBg: 'bg-red-50',
+      iconColor: 'text-red-500',
+      topBorder: 'border-t-red-400',
+      numColor: 'text-red-600',
+    },
   ]
 
   return (
     <div className="p-6">
       {/* KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-        {kpis.map(({ label, value, href }) => (
-          <Link key={label} href={href} className="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer block">
-            <p className="text-sm text-gray-500 mb-3">{label}</p>
-            <p className="text-4xl font-bold text-gray-900">{value}</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        {kpis.map(({ label, value, href, Icon, iconBg, iconColor, topBorder, numColor }) => (
+          <Link
+            key={label}
+            href={href}
+            className={`bg-white rounded-xl border border-gray-200 border-t-2 ${topBorder} p-5 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer block group`}
+          >
+            <div className="flex items-start justify-between mb-4">
+              <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center`}>
+                <Icon className={`w-5 h-5 ${iconColor}`} />
+              </div>
+            </div>
+            <p className={`text-3xl font-bold ${numColor} mb-1 leading-none`}>{value}</p>
+            <p className="text-sm text-gray-500 mt-1.5">{label}</p>
           </Link>
         ))}
       </div>
@@ -276,20 +322,29 @@ export default async function DashboardPage() {
             <p className="text-sm text-gray-400 text-center py-8">No activity yet</p>
           ) : (
             <div>
-              {recentActivity.slice(0, 8).map((log) => (
-                <div key={log.id} className="flex gap-2.5 py-2 border-b border-gray-50 last:border-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-gray-300 mt-2 shrink-0" />
-                  <div>
-                    <p className="text-sm text-gray-700 leading-snug">
-                      <span className="font-medium">{log.actor?.full_name ?? 'Someone'}</span>
-                      {' '}{log.action.replace(/_/g, ' ')}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                    </p>
+              {recentActivity.slice(0, 8).map((log) => {
+                const isCreate = log.action === 'created'
+                const isDelete = log.action === 'deleted'
+                const ActionIcon = isCreate ? Plus : isDelete ? Trash2 : isCreate ? FileText : CheckCheck
+                const iconBg = isCreate ? 'bg-green-50' : isDelete ? 'bg-red-50' : 'bg-blue-50'
+                const iconColor = isCreate ? 'text-green-500' : isDelete ? 'text-red-500' : 'text-blue-500'
+                return (
+                  <div key={log.id} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                    <div className={`w-6 h-6 rounded-md ${iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
+                      <ActionIcon className={`w-3 h-3 ${iconColor}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700 leading-snug">
+                        <span className="font-medium">{log.actor?.full_name ?? 'Someone'}</span>
+                        {' '}{log.action.replace(/_/g, ' ')}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
         </div>
@@ -300,17 +355,19 @@ export default async function DashboardPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-gray-800 mb-4">Content Pipeline</h3>
           <div className="grid grid-cols-5 gap-3">
-            {pipelineItems.map(({ key, label, colorClass, bgHighlight }) => {
+            {pipelineItems.map(({ key, label, numColor, bg, dotColor }) => {
               const count = pipelineCounts[key]
-              const highlight = (key === 'in_review' || key === 'approved') && count > 0
               return (
                 <Link
                   key={key}
                   href={`/app/calendar?status=${key}`}
-                  className={`rounded-lg p-4 text-center hover:opacity-80 transition-all cursor-pointer ${highlight ? bgHighlight : 'bg-gray-50'}`}
+                  className={`rounded-xl p-4 text-center hover:opacity-90 hover:shadow-sm transition-all cursor-pointer ${bg} group`}
                 >
-                  <p className={`text-3xl font-bold ${colorClass}`}>{count}</p>
-                  <p className="text-xs text-gray-500 mt-1">{label}</p>
+                  <div className="flex items-center justify-center gap-1.5 mb-2">
+                    <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                    <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{label}</p>
+                  </div>
+                  <p className={`text-3xl font-bold ${numColor}`}>{count}</p>
                 </Link>
               )
             })}
@@ -340,21 +397,21 @@ export default async function DashboardPage() {
 
                 {/* 4 stat tiles */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-[11px] text-gray-400 mb-1">Content Today</p>
-                    <p className="text-2xl font-bold text-gray-900">{contentToday}</p>
+                  <div className="bg-violet-50 rounded-lg p-3">
+                    <p className="text-[11px] text-violet-400 mb-1 font-medium uppercase tracking-wide">Content Today</p>
+                    <p className="text-2xl font-bold text-violet-700">{contentToday}</p>
                   </div>
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <p className="text-[11px] text-gray-400 mb-1">Tasks Today</p>
-                    <p className="text-2xl font-bold text-gray-900">{tasksToday}</p>
+                  <div className="bg-amber-50 rounded-lg p-3">
+                    <p className="text-[11px] text-amber-400 mb-1 font-medium uppercase tracking-wide">Tasks Today</p>
+                    <p className="text-2xl font-bold text-amber-700">{tasksToday}</p>
                   </div>
                   <div className={`rounded-lg p-3 ${overdueContent > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className="text-[11px] text-gray-400 mb-1">Overdue Content</p>
-                    <p className={`text-2xl font-bold ${overdueContent > 0 ? 'text-red-600' : 'text-gray-900'}`}>{overdueContent}</p>
+                    <p className={`text-[11px] mb-1 font-medium uppercase tracking-wide ${overdueContent > 0 ? 'text-red-400' : 'text-gray-400'}`}>Overdue Content</p>
+                    <p className={`text-2xl font-bold ${overdueContent > 0 ? 'text-red-600' : 'text-gray-500'}`}>{overdueContent}</p>
                   </div>
                   <div className={`rounded-lg p-3 ${overdueTasks > 0 ? 'bg-red-50' : 'bg-gray-50'}`}>
-                    <p className="text-[11px] text-gray-400 mb-1">Overdue Tasks</p>
-                    <p className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-red-600' : 'text-gray-900'}`}>{overdueTasks}</p>
+                    <p className={`text-[11px] mb-1 font-medium uppercase tracking-wide ${overdueTasks > 0 ? 'text-red-400' : 'text-gray-400'}`}>Overdue Tasks</p>
+                    <p className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-red-600' : 'text-gray-500'}`}>{overdueTasks}</p>
                   </div>
                 </div>
               </div>
