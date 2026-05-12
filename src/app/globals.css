@@ -117,6 +117,32 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* ── Browser-tab shape: outward-curving bottom corners on active tab ── */
+.tab-active-shape {
+  position: relative;
+  border-radius: 14px 14px 0 0;
+}
+.tab-active-shape::before,
+.tab-active-shape::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  pointer-events: none;
+}
+.tab-active-shape::before {
+  left: -14px;
+  border-bottom-right-radius: 14px;
+  box-shadow: 5px 1px 0 0 rgba(255, 255, 255, 0.75);
+}
+.tab-active-shape::after {
+  right: -14px;
+  border-bottom-left-radius: 14px;
+  box-shadow: -5px 1px 0 0 rgba(255, 255, 255, 0.75);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
