@@ -110,7 +110,7 @@ export default function DashboardTabs({
             onClick={() => setActiveTab(id)}
             className={`flex items-center gap-2 text-sm font-medium transition-all ${
               activeTab === id
-                ? 'tab-active-shape bg-white/75 backdrop-blur-xl border-t border-l border-r border-white/70 shadow-[0_-2px_16px_rgba(0,0,0,0.07)] px-6 py-3.5 -mb-px text-gray-900 font-semibold relative z-10'
+                ? 'tab-active-shape bg-white/55 backdrop-blur-xl border-t border-l border-r border-white/70 shadow-[0_-2px_16px_rgba(0,0,0,0.07)] px-6 py-3.5 -mb-px text-gray-900 font-semibold relative z-10'
                 : 'px-5 py-2.5 text-gray-400 hover:text-gray-700 hover:bg-white/30 rounded-xl'
             }`}
           >
