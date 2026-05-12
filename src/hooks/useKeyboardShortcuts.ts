@@ -14,9 +14,6 @@ export function useKeyboardShortcuts() {
       if (e.metaKey || e.ctrlKey || e.altKey) return
 
       switch (e.key) {
-        case 'g':
-          // 'g' then 'd' = go to dashboard, etc. — for now just handle direct keys
-          break
         case '1':
           router.push('/app/dashboard')
           break
@@ -29,8 +26,17 @@ export function useKeyboardShortcuts() {
         case '4':
           router.push('/app/clients')
           break
+        case 'n':
+        case 'N':
+          // Open new task modal from anywhere
+          window.dispatchEvent(new CustomEvent('new-task'))
+          break
+        case 'c':
+        case 'C':
+          // Open new content item from anywhere on calendar
+          window.dispatchEvent(new CustomEvent('new-content'))
+          break
         case '?':
-          // Show shortcuts help — dispatch a custom event
           window.dispatchEvent(new CustomEvent('show-shortcuts'))
           break
       }

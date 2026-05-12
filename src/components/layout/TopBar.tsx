@@ -5,6 +5,7 @@ import { Bell, Search, Menu } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { NotificationDrawer } from './NotificationDrawer'
 import { useSidebar } from '@/context/SidebarContext'
+import { createClient } from '@/lib/supabase/client'
 
 const BREADCRUMBS: Record<string, string> = {
   '/app/dashboard': 'Dashboard',
@@ -235,7 +236,35 @@ function CommandItem({
 export default function TopBar() {
   const pathname = usePathname()
   const [notifOpen, setNotifOpen] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
   const { setMobileOpen } = useSidebar()
+  const supabase = createClient()
+
+  // Load unread count + subscribe to real-time inserts
+  useEffect(() => {
+    let userId: string
+    const load = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      userId = user.id
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_read', false)
+      setUnreadCount(count ?? 0)
+    }
+    load()
+
+    const channel = supabase
+      .channel('notif-bell')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' },
+        payload => { if ((payload.new as any).user_id === userId) setUnreadCount(c => c + 1) })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'notifications' },
+        () => { load() })
+      .subscribe()
+    return () => { supabase.removeChannel(channel) }
+  }, [])
 
   return (
     <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-between px-6 shrink-0 relative">
@@ -258,11 +287,16 @@ export default function TopBar() {
 
       <div className="flex items-center gap-2">
         <button
-          onClick={() => setNotifOpen(true)}
+          onClick={() => { setNotifOpen(true); setUnreadCount(0) }}
           className="relative p-1.5 rounded-lg text-gray-500 hover:text-gray-800 transition-colors"
           title="Notifications"
         >
           <Bell size={16} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center leading-none">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
         </button>
       </div>
       <NotificationDrawer open={notifOpen} onClose={() => setNotifOpen(false)} />

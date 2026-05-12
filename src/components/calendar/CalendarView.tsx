@@ -439,8 +439,8 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
           )}
         </div>
 
-        <div className="bg-white overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white overflow-x-auto">
+          <table className="w-full text-sm min-w-[700px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {visibleColDefs.map(col => (

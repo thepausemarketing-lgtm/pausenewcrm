@@ -8,7 +8,7 @@ import { TASK_PRIORITIES, TASK_STATUSES } from '@/lib/constants'
 import type { Task, TaskComment } from '@/types/database.types'
 import { timeAgo, getInitials } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Trash2, Send, Repeat2, X, UserPlus, ChevronDown, ChevronUp } from 'lucide-react'
+import { Trash2, Send, Repeat2, X, UserPlus, ChevronDown, ChevronUp, Plus, Check } from 'lucide-react'
 import { useRole } from '@/context/RoleContext'
 import { toast } from 'sonner'
 
@@ -46,6 +46,9 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
   const [newComment, setNewComment] = useState('')
   const [addingAssignee, setAddingAssignee] = useState(false)
   const [showMore, setShowMore] = useState(false)
+  const [subtasks, setSubtasks] = useState<{ id: string; title: string; status: string }[]>([])
+  const [newSubtask, setNewSubtask] = useState('')
+  const [addingSubtask, setAddingSubtask] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [editingDesc, setEditingDesc] = useState(false)
   const [savingField, setSavingField] = useState<string | null>(null)
@@ -72,7 +75,11 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
         .eq('task_id', taskId).order('created_at', { ascending: true })
       if (data) setComments(data as typeof comments)
     }
-    loadTask(); loadComments(); loadAssignees()
+    const loadSubtasks = async () => {
+      const { data } = await supabase.from('tasks').select('id, title, status').eq('parent_task_id', taskId).order('created_at')
+      if (data) setSubtasks(data)
+    }
+    loadTask(); loadComments(); loadAssignees(); loadSubtasks()
 
     const channel = supabase.channel(`task-${taskId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'task_comments', filter: `task_id=eq.${taskId}` },
@@ -142,6 +149,21 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
     if (!newComment.trim() || !profile) return
     await supabase.from('task_comments').insert({ task_id: taskId, author_id: profile.id, body: newComment.trim() })
     setNewComment('')
+  }
+
+  const addSubtask = async () => {
+    const title = newSubtask.trim()
+    if (!title) { setAddingSubtask(false); return }
+    setNewSubtask('')
+    setAddingSubtask(false)
+    const { data } = await supabase.from('tasks').insert({ title, status: 'todo', priority: 'medium', parent_task_id: taskId }).select('id, title, status').single()
+    if (data) setSubtasks(prev => [...prev, data])
+  }
+
+  const toggleSubtask = async (id: string, done: boolean) => {
+    const status = done ? 'done' : 'todo'
+    setSubtasks(prev => prev.map(s => s.id === id ? { ...s, status } : s))
+    await supabase.from('tasks').update({ status }).eq('id', id)
   }
 
   if (!task) return (
@@ -363,6 +385,48 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
                 </div>
               </div>
             )}
+          </div>
+
+          {/* ── SUBTASKS ── */}
+          <div className="border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                Subtasks {subtasks.length > 0 && `(${subtasks.filter(s => s.status === 'done').length}/${subtasks.length})`}
+              </p>
+              <button onClick={() => setAddingSubtask(true)} className="text-xs text-violet-600 hover:text-violet-800 flex items-center gap-0.5">
+                <Plus size={11} /> Add
+              </button>
+            </div>
+            <div className="space-y-1.5">
+              {subtasks.map(s => (
+                <div key={s.id} className="flex items-center gap-2 group">
+                  <button
+                    onClick={() => toggleSubtask(s.id, s.status !== 'done')}
+                    className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${s.status === 'done' ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-violet-400'}`}
+                  >
+                    {s.status === 'done' && <Check size={10} className="text-white" strokeWidth={3} />}
+                  </button>
+                  <span className={`text-sm flex-1 ${s.status === 'done' ? 'line-through text-gray-400' : 'text-gray-700'}`}>{s.title}</span>
+                </div>
+              ))}
+              {addingSubtask && (
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 rounded border border-gray-300 shrink-0" />
+                  <input
+                    autoFocus
+                    value={newSubtask}
+                    onChange={e => setNewSubtask(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') addSubtask(); if (e.key === 'Escape') { setAddingSubtask(false); setNewSubtask('') } }}
+                    onBlur={addSubtask}
+                    placeholder="Subtask name…"
+                    className="flex-1 text-sm outline-none bg-transparent text-gray-900 placeholder-gray-400 border-b border-gray-200"
+                  />
+                </div>
+              )}
+              {subtasks.length === 0 && !addingSubtask && (
+                <p className="text-xs text-gray-400 italic">No subtasks yet</p>
+              )}
+            </div>
           </div>
 
           {/* ── COMMENTS ── */}

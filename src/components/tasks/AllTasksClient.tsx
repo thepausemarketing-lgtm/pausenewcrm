@@ -50,6 +50,7 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [quickAddTitle, setQuickAddTitle] = useState('')
+  const [quickAddDue, setQuickAddDue] = useState('')
   const [quickAddActive, setQuickAddActive] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingTitle, setEditingTitle] = useState('')
@@ -70,13 +71,15 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
 
   const handleQuickAdd = async () => {
     const title = quickAddTitle.trim()
-    if (!title) { setQuickAddActive(false); return }
+    if (!title) { setQuickAddActive(false); setQuickAddDue(''); return }
     setQuickAddTitle('')
+    const due = quickAddDue
+    setQuickAddDue('')
     setQuickAddActive(false)
     const res = await fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title }),
+      body: JSON.stringify({ title, ...(due ? { due_date: due } : {}) }),
     })
     if (res.ok) {
       const task = await res.json()
@@ -311,8 +314,8 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           />
         </div>
       ) : (
-        <div className="bg-white overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="bg-white overflow-x-auto">
+          <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="px-3 py-2.5 w-8">
@@ -362,12 +365,18 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
                         autoFocus
                         value={quickAddTitle}
                         onChange={e => setQuickAddTitle(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') { setQuickAddActive(false); setQuickAddTitle('') } }}
-                        onBlur={handleQuickAdd}
+                        onKeyDown={e => { if (e.key === 'Enter') handleQuickAdd(); if (e.key === 'Escape') { setQuickAddActive(false); setQuickAddTitle(''); setQuickAddDue('') } }}
                         placeholder="Task name…"
                         className="flex-1 text-sm outline-none bg-transparent text-gray-900 placeholder-gray-400"
                       />
-                      <span className="text-xs text-gray-400 flex items-center gap-0.5 shrink-0"><CornerDownLeft size={10} /> Enter</span>
+                      <input
+                        type="date"
+                        value={quickAddDue}
+                        onChange={e => setQuickAddDue(e.target.value)}
+                        className="h-6 px-1.5 text-xs border border-gray-200 rounded-md bg-white text-gray-600 focus:outline-none focus:ring-1 focus:ring-violet-400"
+                        title="Due date (optional)"
+                      />
+                      <button onClick={handleQuickAdd} className="text-xs text-violet-600 font-medium hover:text-violet-800 shrink-0 flex items-center gap-0.5"><CornerDownLeft size={10} /> Add</button>
                     </div>
                   ) : (
                     <button
