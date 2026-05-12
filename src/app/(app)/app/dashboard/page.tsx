@@ -8,85 +8,74 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const today = new Date().toISOString().split('T')[0]
+  const today    = new Date().toISOString().split('T')[0]
   const nextWeek = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString().split('T')[0]
+  const nowIso   = new Date().toISOString()
 
-  // ── Greeting ────────────────────────────────────────────────────────────────
-  const { data: currentProfile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
-  const firstName = (currentProfile?.full_name ?? '').split(' ')[0] || 'there'
-  const hourNow = new Date().getHours()
-  const greeting = hourNow < 12 ? 'Good morning' : hourNow < 17 ? 'Good afternoon' : 'Good evening'
-  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
-
-  // ── Visible users ────────────────────────────────────────────────────────────
-  const visibleIds = await getVisibleUserIds(supabase, user.id)
-  const subordinateIds = visibleIds ? visibleIds.filter(id => id !== user.id) : null
-
-  // ── Hero stats ───────────────────────────────────────────────────────────────
+  // ── Fire every independent query in ONE parallel batch ───────────────────────
   const [
-    { count: activeClients },
-    { count: tasksDueToday },
-    { count: contentThisWeek },
-    { count: overdueTasks },
+    profileRes,
+    visibleIds,
+    activeClientsRes,
+    tasksDueTodayRes,
+    contentThisWeekRes,
+    overdueTasksRes,
+    myTasksRes,
+    contentRes,
+    pipelineRes,
   ] = await Promise.all([
+    supabase.from('profiles').select('full_name').eq('id', user.id).single(),
+    getVisibleUserIds(supabase, user.id),
     supabase.from('clients').select('*', { count: 'exact', head: true }).eq('status', 'active'),
     supabase.from('tasks').select('*', { count: 'exact', head: true }).eq('due_date', today).not('status', 'in', '(done,cancelled)'),
     supabase.from('content_items').select('*', { count: 'exact', head: true }).gte('publish_at', today).lte('publish_at', nextWeek),
     supabase.from('tasks').select('*', { count: 'exact', head: true }).lt('due_date', today).not('status', 'in', '(done,cancelled)'),
+    supabase.from('tasks')
+      .select('id, title, priority, status, due_date, client:clients(name,slug)')
+      .eq('assigned_to', user.id)
+      .not('status', 'in', '(done,cancelled)')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(20),
+    supabase.from('content_items')
+      .select('id, title, status, publish_at, client:clients(name,slug)')
+      .gte('publish_at', nowIso)
+      .in('status', ['approved', 'scheduled', 'published'])
+      .order('publish_at', { ascending: true })
+      .limit(20),
+    supabase.from('content_items').select('status').not('status', 'eq', 'cancelled'),
   ])
 
+  // ── Greeting ─────────────────────────────────────────────────────────────────
+  const firstName = (profileRes.data?.full_name ?? '').split(' ')[0] || 'there'
+  const hourNow   = new Date().getHours()
+  const greeting  = hourNow < 12 ? 'Good morning' : hourNow < 17 ? 'Good afternoon' : 'Good evening'
+  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  // ── Hero stats ────────────────────────────────────────────────────────────────
   const heroStats = [
-    { label: 'Active clients',    value: activeClients ?? 0,   href: '/app/clients?status=active', warn: false },
-    { label: 'Due today',         value: tasksDueToday ?? 0,    href: '/app/tasks?date=today',      warn: false },
-    { label: 'Content this week', value: contentThisWeek ?? 0,  href: '/app/calendar',              warn: false },
-    { label: 'Overdue items',     value: overdueTasks ?? 0,     href: '/app/tasks?date=overdue',    warn: (overdueTasks ?? 0) > 0 },
+    { label: 'Active clients',    value: activeClientsRes.count  ?? 0, href: '/app/clients?status=active', warn: false },
+    { label: 'Due today',         value: tasksDueTodayRes.count  ?? 0, href: '/app/tasks?date=today',      warn: false },
+    { label: 'Content this week', value: contentThisWeekRes.count ?? 0, href: '/app/calendar',             warn: false },
+    { label: 'Overdue items',     value: overdueTasksRes.count   ?? 0, href: '/app/tasks?date=overdue',    warn: (overdueTasksRes.count ?? 0) > 0 },
   ]
 
-  // ── My Tasks ─────────────────────────────────────────────────────────────────
-  const { data: myTasksRaw } = await supabase
-    .from('tasks')
-    .select('id, title, priority, status, due_date, client:clients(name,slug)')
-    .eq('assigned_to', user.id)
-    .not('status', 'in', '(done,cancelled)')
-    .order('due_date', { ascending: true, nullsFirst: false })
-    .limit(20)
-
-  const tasks = (myTasksRaw ?? []).map((t: any) => ({
-    id: t.id,
-    title: t.title,
-    priority: t.priority,
-    status: t.status,
-    due_date: t.due_date,
-    client: t.client ?? null,
+  // ── My Tasks ──────────────────────────────────────────────────────────────────
+  const tasks = (myTasksRes.data ?? []).map((t: any) => ({
+    id: t.id, title: t.title, priority: t.priority,
+    status: t.status, due_date: t.due_date, client: t.client ?? null,
   }))
 
   // ── Upcoming Content ──────────────────────────────────────────────────────────
-  const { data: contentRaw } = await supabase
-    .from('content_items')
-    .select('id, title, status, publish_at, client:clients(name,slug)')
-    .gte('publish_at', new Date().toISOString())
-    .in('status', ['approved', 'scheduled', 'published'])
-    .order('publish_at', { ascending: true })
-    .limit(20)
-
-  const content = (contentRaw ?? []).map((c: any) => ({
-    id: c.id,
-    title: c.title,
-    status: c.status,
-    publish_at: c.publish_at,
-    client: c.client ?? null,
+  const content = (contentRes.data ?? []).map((c: any) => ({
+    id: c.id, title: c.title, status: c.status,
+    publish_at: c.publish_at, client: c.client ?? null,
   }))
 
-  // ── Content Pipeline ─────────────────────────────────────────────────────────
-  const { data: pipelineRaw } = await supabase
-    .from('content_items')
-    .select('status')
-    .not('status', 'eq', 'cancelled')
-
+  // ── Content Pipeline ──────────────────────────────────────────────────────────
   const pipelineStatuses = ['draft', 'in_review', 'approved', 'scheduled', 'published'] as const
   type PS = typeof pipelineStatuses[number]
   const pipelineCounts = pipelineStatuses.reduce<Record<PS, number>>((acc, s) => {
-    acc[s] = (pipelineRaw ?? []).filter((i: any) => i.status === s).length
+    acc[s] = (pipelineRes.data ?? []).filter((i: any) => i.status === s).length
     return acc
   }, { draft: 0, in_review: 0, approved: 0, scheduled: 0, published: 0 })
 
@@ -98,62 +87,36 @@ export default async function DashboardPage() {
     { key: 'published', label: 'Published', numColor: 'text-green-700',  bg: 'bg-green-50',  dotColor: 'bg-green-500',  count: pipelineCounts.published },
   ]
 
-  // ── Activity — current user + everyone under them (visibleIds = null → admin sees all)
-  const activityQuery = supabase
+  // ── Activity + Team — both depend on visibleIds, run in parallel ──────────────
+  const subordinateIds = visibleIds ? visibleIds.filter(id => id !== user.id) : null
+
+  const activityQueryBase = supabase
     .from('activity_logs')
     .select('id, action, entity_type, entity_id, created_at, actor:profiles!activity_logs_actor_id_fkey(full_name)')
     .order('created_at', { ascending: false })
-    .limit(50)
-  const { data: activityRaw } = visibleIds
-    ? await activityQuery.in('actor_id', visibleIds)
-    : await activityQuery
+    .limit(30)
 
-  const activity = (activityRaw ?? []).map((l: any) => ({
-    id: l.id,
-    actorName: l.actor?.full_name ?? 'Someone',
-    action: l.action,
-    entityType: l.entity_type ?? null,
-    entityId: l.entity_id ?? null,
-    createdAt: l.created_at,
+  // Team profiles query (conditional on role)
+  const teamProfilesPromise = subordinateIds === null
+    ? supabase.from('profiles').select('id, full_name, avatar_url').eq('is_active', true).neq('id', user.id)
+    : subordinateIds.length > 0
+      ? supabase.from('profiles').select('id, full_name, avatar_url').in('id', subordinateIds).eq('is_active', true)
+      : Promise.resolve({ data: [] })
+
+  const [activityRes, teamProfilesRes] = await Promise.all([
+    visibleIds ? activityQueryBase.in('actor_id', visibleIds) : activityQueryBase,
+    teamProfilesPromise,
+  ])
+
+  const activity = (activityRes.data ?? []).map((l: any) => ({
+    id: l.id, actorName: l.actor?.full_name ?? 'Someone',
+    action: l.action, entityType: l.entity_type ?? null,
+    entityId: l.entity_id ?? null, createdAt: l.created_at,
   }))
 
-  // ── Client Health ─────────────────────────────────────────────────────────────
-  const { data: clientsRaw } = await supabase
-    .from('clients')
-    .select('id, name, slug, status, health_score')
-    .eq('status', 'active')
-    .order('name')
-    .limit(20)
-
-  const clients = (clientsRaw ?? []).map((c: any) => ({
-    id: c.id,
-    name: c.name,
-    slug: c.slug,
-    status: c.status,
-    health_score: c.health_score ?? null,
-  }))
-
-  // ── Team Overview ─────────────────────────────────────────────────────────────
-  let allProfiles: { id: string; full_name: string; avatar_url: string | null }[] = []
-  let teamMemberIds: string[] = []
-
-  if (subordinateIds === null) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .eq('is_active', true)
-      .neq('id', user.id)
-    allProfiles = profiles ?? []
-    teamMemberIds = allProfiles.map(p => p.id)
-  } else if (subordinateIds.length > 0) {
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url')
-      .in('id', subordinateIds)
-      .eq('is_active', true)
-    allProfiles = profiles ?? []
-    teamMemberIds = allProfiles.map(p => p.id)
-  }
+  // ── Team stats — if there are team members, fetch their tasks + content ───────
+  const allProfiles: { id: string; full_name: string; avatar_url: string | null }[] = teamProfilesRes.data ?? []
+  const teamMemberIds = allProfiles.map(p => p.id)
 
   type TeamRow    = { id: string; due_date: string | null; status: string }
   type ContentRow = { assigned_to: string | null; publish_at: string | null; live_links: Record<string, string> | null; status: string }
@@ -165,17 +128,14 @@ export default async function DashboardPage() {
 
   if (teamMemberIds.length > 0) {
     const [directTasksRes, junctionTasksRes, teamContentRes] = await Promise.all([
-      supabase
-        .from('tasks')
+      supabase.from('tasks')
         .select('id, assigned_to, due_date, status')
         .in('assigned_to', teamMemberIds)
         .not('status', 'in', '(done,cancelled)'),
-      (supabase as any)
-        .from('task_assignees')
+      (supabase as any).from('task_assignees')
         .select('task_id, user_id, task:tasks!task_assignees_task_id_fkey(id, due_date, status)')
         .in('user_id', teamMemberIds),
-      supabase
-        .from('content_items')
+      supabase.from('content_items')
         .select('assigned_to, publish_at, live_links, status')
         .in('assigned_to', teamMemberIds)
         .not('status', 'in', '(cancelled)'),
@@ -198,21 +158,17 @@ export default async function DashboardPage() {
   }
 
   const team = allProfiles.map(profile => {
-    const taskIds   = Array.from(personTaskMap[profile.id] ?? [])
-    const myTasks   = taskIds.map(id => taskDataMap[id]).filter(Boolean)
-    const myContent = rawTeamContent.filter(c => c.assigned_to === profile.id)
-
+    const taskIds  = Array.from(personTaskMap[profile.id] ?? [])
+    const myTasks  = taskIds.map(id => taskDataMap[id]).filter(Boolean)
+    const myCont   = rawTeamContent.filter(c => c.assigned_to === profile.id)
     return {
-      id:             profile.id,
-      full_name:      profile.full_name,
-      avatar_url:     profile.avatar_url,
+      id: profile.id, full_name: profile.full_name, avatar_url: profile.avatar_url,
       tasksToday:     myTasks.filter(t => t.due_date === today).length,
       overdueTasks:   myTasks.filter(t => t.due_date && t.due_date < today).length,
-      contentToday:   myContent.filter(c => c.publish_at?.startsWith(today)).length,
-      overdueContent: myContent.filter(c => {
+      contentToday:   myCont.filter(c => c.publish_at?.startsWith(today)).length,
+      overdueContent: myCont.filter(c => {
         if (!c.publish_at) return false
-        const isPosted = Object.values(c.live_links ?? {}).some(v => v)
-        return !isPosted && c.publish_at < new Date().toISOString()
+        return !Object.values(c.live_links ?? {}).some(v => v) && c.publish_at < nowIso
       }).length,
     }
   })
