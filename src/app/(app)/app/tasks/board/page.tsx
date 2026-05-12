@@ -45,7 +45,7 @@ export default async function TaskBoardPage() {
   ])
 
   return (
-    <div className="h-full flex flex-col px-6 pt-6">
+    <div className="h-full flex flex-col px-3 sm:px-6 pt-3 sm:pt-6">
       <PageHeader
         title="Task Board"
         actions={<TaskViewToggle />}

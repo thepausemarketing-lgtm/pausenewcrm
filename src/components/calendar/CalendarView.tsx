@@ -282,14 +282,14 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
   return (
     <div className="flex flex-col">
       {/* ── Row 1: Navigation + View Toggle | Actions ── */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         {/* Left: month nav + view toggle */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
           <div className="flex items-center gap-1">
             <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
               <ChevronLeft size={16} />
             </button>
-            <h2 className="text-base font-semibold text-gray-900 min-w-[120px] text-center">
+            <h2 className="text-sm sm:text-base font-semibold text-gray-900 min-w-[100px] sm:min-w-[120px] text-center">
               {format(currentDate, 'MMMM yyyy')}
             </h2>
             <button onClick={() => navigate(1)} className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors">
@@ -301,8 +301,8 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
             {(['list', 'board', 'calendar'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
                 className={view === v
-                  ? 'px-3 py-1 text-xs font-medium bg-white rounded-md shadow-sm text-gray-900 capitalize'
-                  : 'px-3 py-1 text-xs text-gray-500 hover:text-gray-700 capitalize'}>
+                  ? 'px-2.5 sm:px-3 py-1 text-xs font-medium bg-white rounded-md shadow-sm text-gray-900 capitalize'
+                  : 'px-2.5 sm:px-3 py-1 text-xs text-gray-500 hover:text-gray-700 capitalize'}>
                 {v}
               </button>
             ))}
@@ -310,7 +310,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
         </div>
 
         {/* Right: secondary actions + primary CTA */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
           {/* Filters toggle */}
           <button
             onClick={() => setFilterOpen(o => !o)}
@@ -321,7 +321,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
             }`}
           >
             <SlidersHorizontal size={13} />
-            Filters
+            <span className="hidden sm:inline">Filters</span>
             {activeFilterCount > 0 && (
               <span className="ml-0.5 w-4 h-4 rounded-full bg-violet-600 text-white text-[10px] font-semibold flex items-center justify-center leading-none">
                 {activeFilterCount}
@@ -335,14 +335,14 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
                 onClick={downloadCSV}
                 className="flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
               >
-                <Download size={13} /> Export
+                <Download size={13} /> <span className="hidden sm:inline">Export</span>
               </button>
               <div className="relative" ref={colPickerRef}>
                 <button
                   onClick={() => setColPickerOpen(o => !o)}
                   className="flex items-center gap-1.5 h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
                 >
-                  <Columns size={13} /> Columns
+                  <Columns size={13} /> <span className="hidden sm:inline">Columns</span>
                 </button>
                 {colPickerOpen && (
                   <div className="absolute right-0 top-10 z-50 w-48 bg-white rounded-xl border border-gray-200 shadow-lg p-2">
@@ -364,14 +364,14 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
           )}
 
           <Button size="sm" className="gap-1.5" onClick={() => setCreateDate(format(new Date(), 'yyyy-MM-dd'))}>
-            <Plus size={13} /> New Content
+            <Plus size={13} /> <span className="hidden sm:inline">New Content</span><span className="sm:hidden">New</span>
           </Button>
         </div>
       </div>
 
       {/* ── Row 2: Filter bar (collapsible, instant local filtering) ── */}
       {filterOpen && (
-        <div className="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex-wrap">
+        <div className="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl border border-gray-100 flex-wrap overflow-x-auto">
           <select value={localClient} onChange={e => setLocalClient(e.target.value)}
             className="h-8 px-2.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-700">
             <option value="">All clients</option>
@@ -439,8 +439,8 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
           )}
         </div>
 
-        <div className="bg-white overflow-x-auto">
-          <table className="w-full text-sm min-w-[700px]">
+        <div className="bg-white overflow-x-auto rounded-xl border border-gray-100">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {visibleColDefs.map(col => (
@@ -507,7 +507,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
           <div className="grid grid-cols-7 flex-1">
             {/* Empty cells before month start */}
             {Array.from({ length: firstDayOffset }).map((_, i) => (
-              <div key={`empty-${i}`} className="border-r border-b border-gray-50 min-h-[120px] bg-gray-50/50" />
+              <div key={`empty-${i}`} className="border-r border-b border-gray-50 min-h-[60px] sm:min-h-[120px] bg-gray-50/50" />
             ))}
 
             {days.map(day => {
@@ -518,7 +518,7 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
               return (
                 <div
                   key={dateStr}
-                  className="border-r border-b border-gray-50 min-h-[120px] p-1.5 hover:bg-gray-50/50 transition-colors group"
+                  className="border-r border-b border-gray-50 min-h-[60px] sm:min-h-[120px] p-1 sm:p-1.5 hover:bg-gray-50/50 transition-colors group"
                   onClick={() => setCreateDate(dateStr)}
                 >
                   <div className="flex items-center justify-between mb-1">

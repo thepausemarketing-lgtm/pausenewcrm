@@ -83,7 +83,7 @@ export default function AllRenewalsClient({ renewals, clients, canEdit }: Props)
   }).length
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-3 sm:p-6">
       <PageHeader
         title="Service Renewals"
         description="All upcoming renewals across clients"
@@ -91,7 +91,7 @@ export default function AllRenewalsClient({ renewals, clients, canEdit }: Props)
 
       {/* Summary strip */}
       {(overdueCnt > 0 || within30 > 0) && (
-        <div className="flex gap-3 mb-5">
+        <div className="flex flex-wrap gap-3 mb-5">
           {overdueCnt > 0 && (
             <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-2.5">
               <AlertTriangle size={14} className="text-red-600" />
@@ -142,14 +142,15 @@ export default function AllRenewalsClient({ renewals, clients, canEdit }: Props)
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[560px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Service</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Client</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Category</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Cost</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Cycle</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Category</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Cost</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Cycle</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Renewal Date</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Urgency</th>
               </tr>
@@ -175,16 +176,16 @@ export default function AllRenewalsClient({ renewals, clients, canEdit }: Props)
                         </Link>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium"
                         style={{ backgroundColor: cat.color + '18', color: cat.color }}>
                         {cat.label}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-700">
+                    <td className="px-4 py-3 font-medium text-gray-700 hidden sm:table-cell">
                       {r.cost ? formatCurrency(r.cost, r.currency) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{BILLING_CYCLES[r.billing_cycle] ?? r.billing_cycle}</td>
+                    <td className="px-4 py-3 text-gray-500 text-xs hidden md:table-cell">{BILLING_CYCLES[r.billing_cycle] ?? r.billing_cycle}</td>
                     <td className="px-4 py-3 text-gray-700">
                       {new Date(r.renewal_date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </td>
@@ -194,6 +195,7 @@ export default function AllRenewalsClient({ renewals, clients, canEdit }: Props)
               })}
             </tbody>
           </table>
+          </div>
           <div className="px-4 py-2.5 bg-gray-50 border-t border-gray-100 text-xs text-gray-400">
             {filtered.length} service{filtered.length !== 1 ? 's' : ''}
           </div>

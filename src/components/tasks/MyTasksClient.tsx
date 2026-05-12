@@ -199,16 +199,16 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-5xl mx-auto p-3 sm:p-6">
       <PageHeader
         title="My Tasks"
         description="Tasks assigned to you"
         actions={
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <TaskViewToggle />
             <div className="flex gap-2">
               <Button variant="outline" size="sm" className="gap-1.5" onClick={downloadCSV}>
-                <Download size={14} /> Export
+                <Download size={14} /> <span className="hidden sm:inline">Export</span>
               </Button>
               <Button size="sm" className="gap-1.5" onClick={() => setNewTaskOpen(true)}>
                 <Plus size={14} /> New Task
@@ -219,7 +219,7 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
       />
 
       {/* Filter bar */}
-      <div className="flex items-center gap-2 mb-5 flex-wrap">
+      <div className="flex items-center gap-2 mb-5 flex-wrap overflow-x-auto pb-1">
         {DATE_TABS.map(({ key, label, icon: Icon }) => {
           const active = dateFilter === key
           const count = counts[key]

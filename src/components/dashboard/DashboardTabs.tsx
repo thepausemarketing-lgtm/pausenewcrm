@@ -76,23 +76,23 @@ export default function DashboardTabs({
   const doneCount      = tasks.filter(t => t.status === 'done').length
 
   return (
-    <div className="px-6 pb-6 min-h-full">
+    <div className="px-3 sm:px-6 pb-6 min-h-full">
 
       {/* ── Hero ─────────────────────────────────────────────────────────────── */}
-      <div className="py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+      <div className="py-5 sm:py-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div>
           <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Your workspace</p>
-          <h1 className="text-[2.4rem] font-bold text-gray-900 tracking-tight leading-tight">
+          <h1 className="text-3xl sm:text-[2.4rem] font-bold text-gray-900 tracking-tight leading-tight">
             {greeting}, {firstName}! 👋
           </h1>
           <p className="text-sm text-gray-400 mt-1">{todayLabel}</p>
         </div>
-        {/* Hero KPIs */}
-        <div className="flex gap-6 sm:gap-10">
+        {/* Hero KPIs — 2×2 grid on mobile, row on sm+ */}
+        <div className="grid grid-cols-2 sm:flex sm:flex-row gap-4 sm:gap-10">
           {heroStats.map(({ label, value, href, warn }) => (
             <Link key={label} href={href} className="group text-center">
               <div className="flex items-center justify-center gap-1.5">
-                <p className={`text-[2.8rem] font-bold tabular-nums leading-none tracking-tight group-hover:opacity-70 transition-opacity ${warn && value > 0 ? 'text-red-500' : 'text-gray-900'}`}>
+                <p className={`text-[2rem] sm:text-[2.8rem] font-bold tabular-nums leading-none tracking-tight group-hover:opacity-70 transition-opacity ${warn && value > 0 ? 'text-red-500' : 'text-gray-900'}`}>
                   {value}
                 </p>
                 {warn && value > 0 && <span className="w-2 h-2 rounded-full bg-red-400 mt-1 shrink-0" />}
@@ -106,19 +106,19 @@ export default function DashboardTabs({
       </div>
 
       {/* ── Tab bar ──────────────────────────────────────────────────────────── */}
-      <div className="flex justify-center items-end gap-1 relative z-10">
+      <div className="flex justify-start sm:justify-center items-end gap-0.5 sm:gap-1 relative z-10 overflow-x-auto pb-0">
         {TABS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 text-sm font-medium transition-all ${
+            className={`flex items-center gap-1.5 text-xs sm:text-sm font-medium transition-all whitespace-nowrap shrink-0 ${
               activeTab === id
-                ? 'tab-active-shape bg-[rgb(243,245,249)] border-t border-l border-r border-white/70 shadow-[0_-2px_16px_rgba(0,0,0,0.07)] px-6 py-3.5 -mb-px text-gray-900 font-semibold relative z-10'
-                : 'px-5 py-2.5 text-gray-400 hover:text-gray-700 hover:bg-white/30 rounded-xl'
+                ? 'tab-active-shape bg-[rgb(243,245,249)] border-t border-l border-r border-white/70 shadow-[0_-2px_16px_rgba(0,0,0,0.07)] px-4 sm:px-6 py-3 sm:py-3.5 -mb-px text-gray-900 font-semibold relative z-10'
+                : 'px-3 sm:px-5 py-2 sm:py-2.5 text-gray-400 hover:text-gray-700 hover:bg-white/30 rounded-xl'
             }`}
           >
-            <Icon size={14} />
-            {label}
+            <Icon size={13} />
+            <span className="hidden sm:inline">{label}</span>
           </button>
         ))}
       </div>
@@ -130,7 +130,7 @@ export default function DashboardTabs({
         {activeTab === 'tasks' && (
           <>
             {/* Summary strip */}
-            <div className="grid grid-cols-4 gap-3 p-4 border-b border-white/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 sm:p-4 border-b border-white/50">
               <StatChip icon={AlertTriangle} label="Overdue"      value={overdueCount}  color="bg-red-50 text-red-500" />
               <StatChip icon={Clock}         label="Due today"    value={dueTodayCount}  color="bg-amber-50 text-amber-500" />
               <StatChip icon={TrendingUp}    label="High priority" value={highPrioCount} color="bg-orange-50 text-orange-500" />
@@ -141,49 +141,51 @@ export default function DashboardTabs({
               <p className="text-sm text-gray-400 text-center py-16">No pending tasks 🎉</p>
             ) : (
               <>
-                <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100/60">
+                <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-gray-100/60">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">All pending tasks</p>
                   <Link href="/app/tasks" className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors">View all →</Link>
                 </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-100/50">
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-6 py-2.5">Task</th>
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2.5 w-28">Priority</th>
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2.5 w-36">Due</th>
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2.5 w-36">Client</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {tasks.map((task) => {
-                      const prio = taskPriorities.find(p => p.value === task.priority)
-                      const isOverdue = task.due_date && task.due_date < today
-                      return (
-                        <tr key={task.id} className="border-b border-gray-50/80 last:border-0 hover:bg-white/50 transition-colors group">
-                          <td className="px-6 py-3">
-                            <Link href={`/app/tasks/${task.id}`} className="flex items-center gap-3">
-                              <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: prio?.color ?? '#ccc' }} />
-                              <span className={`text-sm font-medium group-hover:text-gray-900 transition-colors ${isOverdue ? 'text-gray-700' : 'text-gray-700'}`}>{task.title}</span>
-                            </Link>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-xs font-semibold capitalize px-2 py-0.5 rounded-md" style={{ color: prio?.color ?? '#999', backgroundColor: `${prio?.color ?? '#ccc'}18` }}>
-                              {task.priority ?? '—'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`text-xs font-medium ${dueDateColor(task.due_date)}`}>{dueDateLabel(task.due_date)}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {task.client
-                              ? <Link href={`/app/clients/${task.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800 font-medium">{task.client.name}</Link>
-                              : <span className="text-xs text-gray-300">—</span>}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[480px]">
+                    <thead>
+                      <tr className="border-b border-gray-100/50">
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-6 py-2.5">Task</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-24 sm:w-28">Priority</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-28 sm:w-36">Due</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-28 sm:w-36 hidden sm:table-cell">Client</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tasks.map((task) => {
+                        const prio = taskPriorities.find(p => p.value === task.priority)
+                        const isOverdue = task.due_date && task.due_date < today
+                        return (
+                          <tr key={task.id} className="border-b border-gray-50/80 last:border-0 hover:bg-white/50 transition-colors group">
+                            <td className="px-3 sm:px-6 py-3">
+                              <Link href={`/app/tasks/${task.id}`} className="flex items-center gap-2 sm:gap-3">
+                                <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: prio?.color ?? '#ccc' }} />
+                                <span className={`text-sm font-medium group-hover:text-gray-900 transition-colors ${isOverdue ? 'text-gray-700' : 'text-gray-700'}`}>{task.title}</span>
+                              </Link>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3">
+                              <span className="text-xs font-semibold capitalize px-2 py-0.5 rounded-md" style={{ color: prio?.color ?? '#999', backgroundColor: `${prio?.color ?? '#ccc'}18` }}>
+                                {task.priority ?? '—'}
+                              </span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3">
+                              <span className={`text-xs font-medium ${dueDateColor(task.due_date)}`}>{dueDateLabel(task.due_date)}</span>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
+                              {task.client
+                                ? <Link href={`/app/clients/${task.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800 font-medium">{task.client.name}</Link>
+                                : <span className="text-xs text-gray-300">—</span>}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </>
@@ -193,7 +195,7 @@ export default function DashboardTabs({
         {activeTab === 'content' && (
           <>
             {/* Summary strip */}
-            <div className="grid grid-cols-4 gap-3 p-4 border-b border-white/50">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 sm:p-4 border-b border-white/50">
               {(['approved','scheduled','published','in_review'] as const).map(s => {
                 const st = contentStatuses.find(x => x.value === s)
                 const cnt = content.filter(c => c.status === s).length
@@ -213,43 +215,45 @@ export default function DashboardTabs({
               <p className="text-sm text-gray-400 text-center py-16">No upcoming content</p>
             ) : (
               <>
-                <div className="flex items-center justify-between px-6 py-3 border-b border-gray-100/60">
+                <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-gray-100/60">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{content.length} items scheduled</p>
                   <Link href="/app/calendar" className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors">Open calendar →</Link>
                 </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-gray-100/50">
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-6 py-2.5">Title</th>
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2.5 w-36">Publish Date</th>
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2.5 w-28">Status</th>
-                      <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-2.5 w-36">Client</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {content.map((item) => {
-                      const st = contentStatuses.find(s => s.value === item.status)
-                      return (
-                        <tr key={item.id} className="border-b border-gray-50/80 last:border-0 hover:bg-white/50 transition-colors">
-                          <td className="px-6 py-3">
-                            <Link href={`/app/calendar/${item.id}`} className="text-sm font-medium text-gray-700 hover:text-gray-900">{item.title}</Link>
-                          </td>
-                          <td className="px-4 py-3 text-xs text-gray-500 font-medium">
-                            {item.publish_at ? new Date(item.publish_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '—'}
-                          </td>
-                          <td className="px-4 py-3">
-                            {st && <StatusBadge label={st.label} color={st.color} />}
-                          </td>
-                          <td className="px-4 py-3">
-                            {item.client
-                              ? <Link href={`/app/clients/${item.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800 font-medium">{item.client.name}</Link>
-                              : <span className="text-xs text-gray-300">—</span>}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[420px]">
+                    <thead>
+                      <tr className="border-b border-gray-100/50">
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-6 py-2.5">Title</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-28 sm:w-36">Publish Date</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-24 sm:w-28">Status</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-28 sm:w-36 hidden sm:table-cell">Client</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {content.map((item) => {
+                        const st = contentStatuses.find(s => s.value === item.status)
+                        return (
+                          <tr key={item.id} className="border-b border-gray-50/80 last:border-0 hover:bg-white/50 transition-colors">
+                            <td className="px-3 sm:px-6 py-3">
+                              <Link href={`/app/calendar/${item.id}`} className="text-sm font-medium text-gray-700 hover:text-gray-900">{item.title}</Link>
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 font-medium">
+                              {item.publish_at ? new Date(item.publish_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '—'}
+                            </td>
+                            <td className="px-3 sm:px-4 py-3">
+                              {st && <StatusBadge label={st.label} color={st.color} />}
+                            </td>
+                            <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
+                              {item.client
+                                ? <Link href={`/app/clients/${item.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800 font-medium">{item.client.name}</Link>
+                                : <span className="text-xs text-gray-300">—</span>}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </>
             )}
           </>
@@ -257,9 +261,9 @@ export default function DashboardTabs({
 
         {/* ── CONTENT PIPELINE ──────────────────────────────────────────────── */}
         {activeTab === 'pipeline' && (
-          <div className="p-5">
+          <div className="p-3 sm:p-5">
             {/* Big KPI cards */}
-            <div className="grid grid-cols-5 gap-3 mb-5">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
               {pipeline.map(({ key, label, numColor, dotColor, count }) => {
                 const total = pipeline.reduce((s, p) => s + p.count, 0)
                 const pct = total ? Math.round((count / total) * 100) : 0
@@ -311,7 +315,7 @@ export default function DashboardTabs({
 
         {/* ── TEAM OVERVIEW ─────────────────────────────────────────────────── */}
         {activeTab === 'team' && (
-          <div className="p-5">
+          <div className="p-3 sm:p-5">
             {team.length === 0 ? (
               <p className="text-sm text-gray-400 text-center py-12">No team members to display</p>
             ) : (
@@ -384,7 +388,7 @@ export default function DashboardTabs({
 
           return (
             <>
-              <div className="flex items-center justify-between px-6 py-4 border-b border-white/40">
+              <div className="flex items-center justify-between px-3 sm:px-6 py-4 border-b border-white/40">
                 <div>
                   <h2 className="font-semibold text-gray-900">Activity</h2>
                   <p className="text-xs text-gray-400 mt-0.5">All actions by you and your team</p>
@@ -408,7 +412,7 @@ export default function DashboardTabs({
                           const initials = log.actorName.split(' ').map((n: string) => n[0]).join('').slice(0,2).toUpperCase()
                           const time = new Date(log.createdAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                           return (
-                            <div key={log.id} className="flex items-start gap-4 px-6 py-3.5 hover:bg-white/40 transition-colors">
+                            <div key={log.id} className="flex items-start gap-3 sm:gap-4 px-3 sm:px-6 py-3 sm:py-3.5 hover:bg-white/40 transition-colors">
                               <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-[11px] font-bold text-gray-600 shrink-0 mt-0.5">
                                 {initials}
                               </div>

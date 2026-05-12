@@ -71,7 +71,7 @@ export default function ReportsClient({ clients, tasks, content, profiles, selec
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto p-3 sm:p-6 space-y-6">
       <PageHeader
         title="Reports"
         description="Analytics and performance overview"
@@ -83,13 +83,13 @@ export default function ReportsClient({ clients, tasks, content, profiles, selec
       />
 
       {/* Filters */}
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-2 sm:gap-3">
         <select value={selectedClient ?? ''} onChange={e => updateFilter('client', e.target.value)}
-          className="h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white">
+          className="h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white flex-1 min-w-[140px]">
           <option value="">All clients</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <input type="date" value={from} onChange={e => updateFilter('from', e.target.value)}
             className="h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white" />
           <span className="text-gray-400 text-sm">to</span>

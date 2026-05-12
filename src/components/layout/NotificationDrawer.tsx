@@ -47,7 +47,7 @@ export function NotificationDrawer({ open, onClose }: Props) {
 
   return (
     <Sheet open={open} onOpenChange={v => !v && onClose()}>
-      <SheetContent className="w-80">
+      <SheetContent className="w-full sm:w-80">
         <SheetHeader>
           <SheetTitle className="flex items-center justify-between">
             <span>Notifications</span>

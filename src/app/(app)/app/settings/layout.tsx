@@ -10,7 +10,7 @@ const SETTINGS_TABS = [
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-4xl mx-auto p-3 sm:p-6">
       <h2 className="text-lg font-semibold text-gray-900 mb-5">Settings</h2>
       <div className="flex gap-1 mb-6 overflow-x-auto border-b border-gray-100 pb-1">
         {SETTINGS_TABS.map(({ href, label }) => (

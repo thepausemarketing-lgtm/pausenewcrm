@@ -29,21 +29,21 @@ export default async function ClientLayout({
   const basePath = `/app/clients/${slug}`
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-3 sm:p-6">
       {/* Client Header */}
-      <div className="bg-white rounded-xl border border-gray-100 p-6 mb-4">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-gray-900">{client.name}</h2>
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">{client.name}</h2>
               <ClientStatusBadge status={client.status} />
             </div>
-            <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-sm text-gray-500">
               {client.industry && <span>{client.industry}</span>}
               {client.website && (
                 <a href={client.website} target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1 hover:text-gray-800">
-                  {client.website.replace(/^https?:\/\//, '')} <ExternalLink size={12} />
+                  className="flex items-center gap-1 hover:text-gray-800 truncate max-w-[200px]">
+                  {client.website.replace(/^https?:\/\//, '')} <ExternalLink size={12} className="shrink-0" />
                 </a>
               )}
               {client.monthly_value && (
@@ -51,7 +51,7 @@ export default async function ClientLayout({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {client.health_score && (
               <div className="flex gap-0.5">
                 {[1, 2, 3, 4, 5].map(i => (

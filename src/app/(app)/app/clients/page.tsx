@@ -50,7 +50,7 @@ export default async function ClientsPage({
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-3 sm:p-6">
       <PageHeader
         title="Clients"
         description={`${parents.length} clients · ${brands.length} brands`}
@@ -64,12 +64,12 @@ export default async function ClientsPage({
       />
 
       {/* Filter bar */}
-      <form className="flex gap-3 mb-6">
+      <form className="flex flex-wrap gap-2 sm:gap-3 mb-6">
         <input
           name="search"
           defaultValue={params.search}
           placeholder="Search clients…"
-          className="flex-1 max-w-xs h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
+          className="flex-1 min-w-[140px] max-w-xs h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white focus:outline-none focus:ring-1 focus:ring-gray-300"
         />
         <select
           name="status"
@@ -94,64 +94,65 @@ export default async function ClientsPage({
         />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Client / Brand</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Industry</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Retainer</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Health</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {grouped.map((row, i) => {
-                if (row.type === 'header') {
-                  // Non-clickable group header row
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[480px]">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Client / Brand</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Industry</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Retainer</th>
+                  <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Health</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {grouped.map((row, i) => {
+                  if (row.type === 'header') {
+                    return (
+                      <tr key={`header-${row.client.id}`} className="bg-gray-50">
+                        <td colSpan={5} className="px-4 py-2">
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{row.client.name}</span>
+                        </td>
+                      </tr>
+                    )
+                  }
+                  const { client, indent } = row
                   return (
-                    <tr key={`header-${row.client.id}`} className="bg-gray-50">
-                      <td colSpan={5} className="px-4 py-2">
-                        <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{row.client.name}</span>
+                    <tr key={`${client.id}-${i}`} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className={indent > 0 ? 'pl-5 flex items-center gap-1.5' : ''}>
+                          {indent > 0 && <ChevronRight size={12} className="text-gray-300 shrink-0" />}
+                          <div>
+                            <Link href={`/app/clients/${client.slug}`} className="font-medium text-gray-900 hover:text-violet-600">
+                              {client.name}
+                            </Link>
+                            {client.website && indent === 0 && (
+                              <p className="text-xs text-gray-400 truncate max-w-[160px] sm:max-w-[200px]">{client.website.replace(/^https?:\/\//, '')}</p>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3"><ClientStatusBadge status={client.status} /></td>
+                      <td className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{client.industry ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-700 hidden sm:table-cell">
+                        {formatCurrency(client.monthly_value, client.currency)}
+                        {client.monthly_value && <span className="text-xs text-gray-400 ml-1">{client.currency}</span>}
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        {client.health_score ? (
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(i => (
+                              <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-green-400' : 'bg-gray-100'}`} />
+                            ))}
+                          </div>
+                        ) : '—'}
                       </td>
                     </tr>
                   )
-                }
-                const { client, indent } = row
-                return (
-                  <tr key={`${client.id}-${i}`} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-4 py-3">
-                      <div className={indent > 0 ? 'pl-5 flex items-center gap-1.5' : ''}>
-                        {indent > 0 && <ChevronRight size={12} className="text-gray-300 shrink-0" />}
-                        <div>
-                          <Link href={`/app/clients/${client.slug}`} className="font-medium text-gray-900 hover:text-violet-600">
-                            {client.name}
-                          </Link>
-                          {client.website && indent === 0 && (
-                            <p className="text-xs text-gray-400 truncate max-w-[200px]">{client.website.replace(/^https?:\/\//, '')}</p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3"><ClientStatusBadge status={client.status} /></td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{client.industry ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {formatCurrency(client.monthly_value, client.currency)}
-                      {client.monthly_value && <span className="text-xs text-gray-400 ml-1">{client.currency}</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      {client.health_score ? (
-                        <div className="flex gap-0.5">
-                          {[1, 2, 3, 4, 5].map(i => (
-                            <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-green-400' : 'bg-gray-100'}`} />
-                          ))}
-                        </div>
-                      ) : '—'}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

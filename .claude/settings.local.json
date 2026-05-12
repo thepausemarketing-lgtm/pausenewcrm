@@ -41,7 +41,23 @@
       "Bash(sed -i '' s/hover:bg-violet-50/hover:bg-gray-100/g 'src/app/\\(app\\)/app/dashboard/page.tsx')",
       "Bash(sed -i '' s/hover:text-violet-600/hover:text-gray-700/g 'src/app/\\(app\\)/app/dashboard/page.tsx')",
       "Bash(sed -i '' 's/bg-violet-100 text-violet-600/bg-gray-100 text-gray-600/g' 'src/app/\\(app\\)/app/dashboard/page.tsx')",
-      "Bash(sed -i '' 's/bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700/bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700/g' 'src/app/\\(app\\)/app/dashboard/page.tsx')"
+      "Bash(sed -i '' 's/bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700/bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700/g' 'src/app/\\(app\\)/app/dashboard/page.tsx')",
+      "Bash(npx next *)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm status)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm diff --stat)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add src/components/layout/TopNav.tsx src/components/dashboard/DashboardTabs.tsx)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm commit -m ' *)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add src/components/dashboard/DashboardTabs.tsx)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm push origin main)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add src/app/globals.css src/components/dashboard/DashboardTabs.tsx)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add src/app/globals.css)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add src/components/layout/TopNav.tsx src/components/dashboard/DashboardTabs.tsx src/app/\\\\\\(app\\\\\\)/app/dashboard/page.tsx)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add src/components/layout/TopNav.tsx)",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm commit -m \"TopNav: fully transparent background, remove border\")",
+      "Bash(xargs -I{} bash -c 'echo \"=== {} ===\" && cat \"{}\"')",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(git -C /Users/sahiljasuja/Desktop/crm add 'src/app/\\(app\\)/app/calendar/[id]/page.tsx' 'src/app/\\(app\\)/app/campaigns/page.tsx' 'src/app/\\(app\\)/app/clients/[slug]/calendar/page.tsx' 'src/app/\\(app\\)/app/clients/[slug]/details/page.tsx' 'src/app/\\(app\\)/app/clients/[slug]/layout.tsx' 'src/app/\\(app\\)/app/clients/[slug]/page.tsx' 'src/app/\\(app\\)/app/clients/page.tsx' 'src/app/\\(app\\)/app/renewals/page.tsx' src/components/calendar/ContentItemDrawer.tsx src/components/clients/ClientForm.tsx src/components/dashboard/DashboardTabs.tsx src/components/shared/KeyboardShortcutsHelp.tsx src/components/shared/StatusBadge.tsx src/components/tasks/AllTasksClient.tsx src/components/tasks/MyTasksClient.tsx)",
+      "Bash(xargs cat)"
     ]
   }
 }

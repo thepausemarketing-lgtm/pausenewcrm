@@ -36,7 +36,7 @@ export default async function CampaignsPage({
   const clients = (rawClients ?? []) as { id: string; name: string }[]
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
+    <div className="max-w-7xl mx-auto p-3 sm:p-6">
       <PageHeader
         title="Campaigns"
         description={`${campaigns.length} campaigns`}
@@ -47,7 +47,7 @@ export default async function CampaignsPage({
         }
       />
 
-      <form className="flex gap-3 mb-6">
+      <form className="flex flex-wrap gap-2 sm:gap-3 mb-6">
         <select name="status" defaultValue={params.status ?? ''}
           className="h-9 px-3 text-sm rounded-lg border border-gray-200 bg-white">
           <option value="">All statuses</option>
@@ -70,15 +70,16 @@ export default async function CampaignsPage({
         />
       ) : (
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[480px]">
             <thead className="bg-gray-50 border-b border-gray-100">
               <tr>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Campaign</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Client</th>
                 <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Status</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Type</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Dates</th>
-                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Budget</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Type</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide hidden sm:table-cell">Dates</th>
+                <th className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide hidden md:table-cell">Budget</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -96,16 +97,17 @@ export default async function CampaignsPage({
                       {client ? <Link href={`/app/clients/${client.slug}`} className="text-gray-500 hover:text-gray-800">{client.name}</Link> : '—'}
                     </td>
                     <td className="px-4 py-3"><StatusBadge label={status.label} color={status.color} /></td>
-                    <td className="px-4 py-3 text-gray-500 capitalize">{campaign.type.replace('_', ' ')}</td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-gray-500 capitalize hidden sm:table-cell">{campaign.type.replace('_', ' ')}</td>
+                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
                       {campaign.start_date ? `${formatDate(campaign.start_date, 'dd/MM')} — ${campaign.end_date ? formatDate(campaign.end_date, 'dd/MM') : 'ongoing'}` : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-700">{formatCurrency(campaign.budget)}</td>
+                    <td className="px-4 py-3 text-gray-700 hidden md:table-cell">{formatCurrency(campaign.budget)}</td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

@@ -7,9 +7,9 @@ export default async function NewClientPage() {
   const { data: allClients } = await supabase.from('clients').select('id,name,parent_client_id').order('name')
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
+    <div className="max-w-2xl mx-auto p-3 sm:p-6">
       <PageHeader title="New Client" description="Add a new client or brand to your workspace" />
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <div className="bg-white rounded-xl border border-gray-100 p-4 sm:p-6">
         <ClientForm allClients={(allClients ?? []) as { id: string; name: string; parent_client_id: string | null }[]} />
       </div>
     </div>
