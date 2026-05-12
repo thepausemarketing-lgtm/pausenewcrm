@@ -69,7 +69,7 @@ export default function TopNav() {
   return (
     <>
       {/* Top Nav Bar — fully opaque so content feels part of the page */}
-      <header className="h-14 bg-white flex items-center px-6 shrink-0 border-b border-gray-100 relative">
+      <header className="h-14 bg-transparent flex items-center px-6 shrink-0 relative">
 
         {/* Logo — left */}
         <Link href="/app/dashboard" className="flex items-center gap-2 shrink-0">
