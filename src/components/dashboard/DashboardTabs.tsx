@@ -1,0 +1,372 @@
+'use client'
+
+import { useState } from 'react'
+import Link from 'next/link'
+import { ListTodo, CalendarDays, BarChart2, Users, Activity, Building2 } from 'lucide-react'
+import StatusBadge from '@/components/shared/StatusBadge'
+
+// ── Types (minimal, passed from server) ─────────────────────────────────────
+interface HeroStat  { label: string; value: number; href: string; warn: boolean }
+interface TaskItem  { id: string; title: string; priority: string; status: string; due_date: string | null; client: { name: string; slug: string } | null }
+interface ContentItem { id: string; title: string; status: string; publish_at: string | null; client: { name: string; slug: string } | null }
+interface PipelineItem { key: string; label: string; numColor: string; bg: string; dotColor: string; count: number }
+interface TeamMember { id: string; full_name: string; avatar_url: string | null; contentToday: number; tasksToday: number; overdueContent: number; overdueTasks: number }
+interface ClientItem { id: string; name: string; slug: string; status: string; health_score: number | null }
+interface ActivityItem { id: string; actorName: string; action: string; createdAt: string }
+interface TaskPriority { value: string; label: string; color: string }
+interface ContentStatus { value: string; label: string; color: string }
+interface ClientStatus  { value: string; label: string; color: string }
+
+interface Props {
+  greeting: string
+  firstName: string
+  todayLabel: string
+  heroStats: HeroStat[]
+  tasks: TaskItem[]
+  content: ContentItem[]
+  pipeline: PipelineItem[]
+  team: TeamMember[]
+  clients: ClientItem[]
+  activity: ActivityItem[]
+  taskPriorities: TaskPriority[]
+  contentStatuses: ContentStatus[]
+  clientStatuses: ClientStatus[]
+}
+
+const TABS = [
+  { id: 'tasks',    label: 'My Tasks',          icon: ListTodo   },
+  { id: 'content',  label: 'Upcoming Content',   icon: CalendarDays },
+  { id: 'pipeline', label: 'Content Pipeline',   icon: BarChart2  },
+  { id: 'team',     label: 'Team Overview',      icon: Users      },
+  { id: 'activity', label: 'Activity',           icon: Activity   },
+  { id: 'clients',  label: 'Client Health',      icon: Building2  },
+]
+
+// Shared card class
+const card = 'bg-white/55 backdrop-blur-xl rounded-2xl border border-white/70 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
+
+function dueDateColor(due: string | null) {
+  if (!due) return 'text-gray-400'
+  const d = new Date(due)
+  const now = new Date()
+  if (d < now) return 'text-red-500'
+  const diff = (d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+  if (diff <= 1) return 'text-amber-500'
+  return 'text-gray-400'
+}
+
+function dueDateLabel(due: string | null) {
+  if (!due) return 'No due date'
+  const d = new Date(due)
+  const now = new Date()
+  if (d < now) {
+    const days = Math.floor((now.getTime() - d.getTime()) / (1000 * 60 * 60 * 24))
+    return days === 0 ? 'Due today' : `Overdue ${d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}`
+  }
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+}
+
+export default function DashboardTabs({
+  greeting, firstName, todayLabel, heroStats,
+  tasks, content, pipeline, team, clients, activity,
+  taskPriorities, contentStatuses, clientStatuses,
+}: Props) {
+  const [activeTab, setActiveTab] = useState('tasks')
+
+  return (
+    <div className="p-6 min-h-full">
+
+      {/* ── Hero Header ──────────────────────────────────────────────────────── */}
+      <div className="mb-6">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1">Your workspace</p>
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+          <h1 className="text-[2rem] font-bold text-gray-900 tracking-tight leading-tight">
+            {greeting}, {firstName}! 👋
+          </h1>
+          {/* Hero stats */}
+          <div className="flex gap-8 sm:gap-12 pb-1">
+            {heroStats.map(({ label, value, href, warn }) => (
+              <Link key={label} href={href} className="text-center group">
+                <p className={`text-3xl font-bold tabular-nums leading-none tracking-tight group-hover:opacity-60 transition-opacity ${warn ? 'text-red-500' : 'text-gray-900'}`}>
+                  {value}
+                </p>
+                <p className="text-[10px] text-gray-400 mt-1.5 font-semibold uppercase tracking-widest whitespace-nowrap">
+                  {label}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+        <p className="text-sm text-gray-400 mt-1.5">{todayLabel}</p>
+      </div>
+
+      {/* ── Tab Bar ──────────────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1 mb-5 border-b border-white/40 pb-0">
+        {TABS.map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-xl transition-all border-b-2 -mb-px ${
+              activeTab === id
+                ? 'text-gray-900 border-gray-900 bg-white/30'
+                : 'text-gray-400 border-transparent hover:text-gray-700 hover:bg-white/20'
+            }`}
+          >
+            <Icon size={14} />
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── Tab Content ─────────────────────────────────────────────────────── */}
+
+      {/* MY TASKS */}
+      {activeTab === 'tasks' && (
+        <div className={`${card} p-0 overflow-hidden`}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/40">
+            <div>
+              <h2 className="font-semibold text-gray-900">My Tasks</h2>
+              <p className="text-xs text-gray-400 mt-0.5">{tasks.length} pending task{tasks.length !== 1 ? 's' : ''}</p>
+            </div>
+            <Link href="/app/tasks" className="text-xs font-semibold bg-gray-900 text-white px-4 py-2 rounded-full hover:bg-gray-700 transition-colors">
+              View all tasks →
+            </Link>
+          </div>
+          {tasks.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-16">No pending tasks 🎉</p>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-50">
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-6 py-3">Task</th>
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-3">Priority</th>
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-3">Due</th>
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-3">Client</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tasks.map((task) => {
+                  const prio = taskPriorities.find(p => p.value === task.priority)
+                  return (
+                    <tr key={task.id} className="border-b border-gray-50 last:border-0 hover:bg-white/40 transition-colors group">
+                      <td className="px-6 py-3.5">
+                        <Link href={`/app/tasks/${task.id}`} className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: prio?.color ?? '#ccc' }} />
+                          <span className="text-sm font-medium text-gray-800 group-hover:text-gray-900">{task.title}</span>
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className="text-xs font-medium capitalize" style={{ color: prio?.color ?? '#999' }}>{task.priority}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <span className={`text-xs font-medium ${dueDateColor(task.due_date)}`}>{dueDateLabel(task.due_date)}</span>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {task.client ? (
+                          <Link href={`/app/clients/${task.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800">{task.client.name}</Link>
+                        ) : <span className="text-xs text-gray-300">—</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* UPCOMING CONTENT */}
+      {activeTab === 'content' && (
+        <div className={`${card} p-0 overflow-hidden`}>
+          <div className="flex items-center justify-between px-6 py-4 border-b border-white/40">
+            <div>
+              <h2 className="font-semibold text-gray-900">Upcoming Content</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Scheduled for publishing</p>
+            </div>
+            <Link href="/app/calendar" className="text-xs font-semibold bg-gray-900 text-white px-4 py-2 rounded-full hover:bg-gray-700 transition-colors">
+              Open calendar →
+            </Link>
+          </div>
+          {content.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-16">No upcoming content</p>
+          ) : (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-gray-50">
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-6 py-3">Title</th>
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-3">Publish Date</th>
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-3">Status</th>
+                  <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-4 py-3">Client</th>
+                </tr>
+              </thead>
+              <tbody>
+                {content.map((item) => {
+                  const st = contentStatuses.find(s => s.value === item.status)
+                  return (
+                    <tr key={item.id} className="border-b border-gray-50 last:border-0 hover:bg-white/40 transition-colors">
+                      <td className="px-6 py-3.5">
+                        <Link href={`/app/calendar/${item.id}`} className="text-sm font-medium text-gray-800 hover:text-gray-900">{item.title}</Link>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-gray-500">
+                        {item.publish_at ? new Date(item.publish_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '—'}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {st && <StatusBadge label={st.label} color={st.color} />}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        {item.client ? (
+                          <Link href={`/app/clients/${item.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800">{item.client.name}</Link>
+                        ) : <span className="text-xs text-gray-300">—</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {/* CONTENT PIPELINE */}
+      {activeTab === 'pipeline' && (
+        <div className="space-y-5">
+          {/* Big pipeline counts */}
+          <div className="grid grid-cols-5 gap-4">
+            {pipeline.map(({ key, label, numColor, bg, dotColor, count }) => (
+              <Link key={key} href={`/app/calendar?status=${key}`}
+                className={`${card} p-6 text-center hover:brightness-95 transition-all`}>
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <span className={`w-2.5 h-2.5 rounded-full ${dotColor}`} />
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
+                </div>
+                <p className={`text-5xl font-bold ${numColor} leading-none`}>{count}</p>
+                <p className="text-xs text-gray-400 mt-2">items</p>
+              </Link>
+            ))}
+          </div>
+
+          {/* Total bar */}
+          <div className={`${card} p-6`}>
+            <h3 className="font-semibold text-gray-900 mb-4">Pipeline Distribution</h3>
+            <div className="flex rounded-full overflow-hidden h-3 mb-4">
+              {pipeline.map(({ key, dotColor, count }) => {
+                const total = pipeline.reduce((s, p) => s + p.count, 0)
+                const pct = total ? (count / total) * 100 : 0
+                return pct > 0 ? (
+                  <div key={key} className={`h-full ${dotColor}`} style={{ width: `${pct}%` }} title={key} />
+                ) : null
+              })}
+            </div>
+            <div className="flex gap-6">
+              {pipeline.map(({ key, label, dotColor, count }) => (
+                <div key={key} className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                  <span className="text-xs text-gray-500">{label}</span>
+                  <span className="text-xs font-bold text-gray-800 ml-1">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TEAM OVERVIEW */}
+      {activeTab === 'team' && (
+        team.length === 0 ? (
+          <div className={`${card} p-16 text-center`}>
+            <p className="text-sm text-gray-400">No team members to display</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {team.map((member) => (
+              <div key={member.id} className={`${card} p-0 overflow-hidden`}>
+                {/* Header */}
+                <div className="flex items-center gap-3 bg-gray-50/60 px-5 py-4 border-b border-white/40">
+                  <div className="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-sm font-bold text-gray-700 shrink-0 overflow-hidden">
+                    {member.avatar_url
+                      ? <img src={member.avatar_url} alt={member.full_name} className="w-full h-full object-cover" />
+                      : member.full_name?.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="font-semibold text-gray-900">{member.full_name}</p>
+                </div>
+                {/* Stats */}
+                <div className="grid grid-cols-2 gap-px bg-gray-100/50">
+                  {[
+                    { label: 'Content Today',  value: member.contentToday,  warn: false },
+                    { label: 'Tasks Today',    value: member.tasksToday,    warn: false },
+                    { label: 'Late Content',   value: member.overdueContent, warn: member.overdueContent > 0 },
+                    { label: 'Late Tasks',     value: member.overdueTasks,   warn: member.overdueTasks > 0 },
+                  ].map(({ label, value, warn }) => (
+                    <div key={label} className={`px-5 py-4 ${warn ? 'bg-red-50/80' : 'bg-white/60'}`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${warn ? 'text-red-400' : 'text-gray-400'}`}>{label}</p>
+                      <p className={`text-3xl font-bold ${warn ? 'text-red-600' : 'text-gray-900'}`}>{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )
+      )}
+
+      {/* ACTIVITY */}
+      {activeTab === 'activity' && (
+        <div className={`${card} p-0 overflow-hidden`}>
+          <div className="px-6 py-4 border-b border-white/40">
+            <h2 className="font-semibold text-gray-900">Recent Activity</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Everything happening in your workspace</p>
+          </div>
+          {activity.length === 0 ? (
+            <p className="text-sm text-gray-400 text-center py-16">No activity yet</p>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {activity.map((log) => (
+                <div key={log.id} className="flex items-start gap-4 px-6 py-4 hover:bg-white/30 transition-colors">
+                  <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 mt-0.5">
+                    {log.actorName.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-700">
+                      <span className="font-semibold text-gray-900">{log.actorName}</span>
+                      {' '}{log.action.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(log.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* CLIENT HEALTH */}
+      {activeTab === 'clients' && (
+        <div>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {clients.map((client) => {
+              const st = clientStatuses.find(s => s.value === client.status)
+              return (
+                <Link key={client.id} href={`/app/clients/${client.slug}`}
+                  className={`${card} p-5 hover:brightness-95 transition-all group`}>
+                  <p className="font-semibold text-gray-900 truncate group-hover:text-gray-700 mb-3">{client.name}</p>
+                  <div className="flex items-center justify-between">
+                    {st && <StatusBadge label={st.label} color={st.color} />}
+                    {client.health_score && (
+                      <div className="flex gap-0.5">
+                        {[1,2,3,4,5].map(i => (
+                          <div key={i} className={`w-1.5 h-4 rounded-sm transition-colors ${i <= client.health_score! ? 'bg-gray-800' : 'bg-gray-200'}`} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
