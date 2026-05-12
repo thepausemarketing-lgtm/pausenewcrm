@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVisibleUserIds } from '@/lib/supabase/helpers'
-import { TASK_PRIORITIES, CONTENT_STATUSES, CLIENT_STATUSES } from '@/lib/constants'
+import { TASK_PRIORITIES, CONTENT_STATUSES } from '@/lib/constants'
 import DashboardTabs from '@/components/dashboard/DashboardTabs'
 
 export default async function DashboardPage() {
@@ -98,17 +98,22 @@ export default async function DashboardPage() {
     { key: 'published', label: 'Published', numColor: 'text-green-700',  bg: 'bg-green-50',  dotColor: 'bg-green-500',  count: pipelineCounts.published },
   ]
 
-  // ── Activity ─────────────────────────────────────────────────────────────────
-  const { data: activityRaw } = await supabase
+  // ── Activity — current user + everyone under them (visibleIds = null → admin sees all)
+  const activityQuery = supabase
     .from('activity_logs')
-    .select('id, action, created_at, actor:profiles!activity_logs_actor_id_fkey(full_name)')
+    .select('id, action, entity_type, entity_id, created_at, actor:profiles!activity_logs_actor_id_fkey(full_name)')
     .order('created_at', { ascending: false })
-    .limit(20)
+    .limit(50)
+  const { data: activityRaw } = visibleIds
+    ? await activityQuery.in('actor_id', visibleIds)
+    : await activityQuery
 
   const activity = (activityRaw ?? []).map((l: any) => ({
     id: l.id,
     actorName: l.actor?.full_name ?? 'Someone',
     action: l.action,
+    entityType: l.entity_type ?? null,
+    entityId: l.entity_id ?? null,
     createdAt: l.created_at,
   }))
 
@@ -222,11 +227,9 @@ export default async function DashboardPage() {
       content={content}
       pipeline={pipeline}
       team={team}
-      clients={clients}
       activity={activity}
       taskPriorities={TASK_PRIORITIES}
       contentStatuses={CONTENT_STATUSES}
-      clientStatuses={CLIENT_STATUSES}
     />
   )
 }

@@ -68,17 +68,17 @@ export default function TopNav() {
 
   return (
     <>
-      {/* Top Nav Bar */}
-      <header className="h-14 bg-white/60 backdrop-blur-xl flex items-center px-6 shrink-0 border-b border-white/50">
+      {/* Top Nav Bar — fully opaque so content feels part of the page */}
+      <header className="h-14 bg-white flex items-center px-6 shrink-0 border-b border-gray-100 relative">
 
-        {/* Logo */}
-        <Link href="/app/dashboard" className="flex items-center gap-2 mr-8 shrink-0">
+        {/* Logo — left */}
+        <Link href="/app/dashboard" className="flex items-center gap-2 shrink-0">
           <div className="w-7 h-7 rounded-lg bg-gray-900 flex items-center justify-center text-white text-xs font-bold tracking-tight">P</div>
           <span className="text-sm font-semibold text-gray-900 hidden sm:block">Pause Marketing<span className="text-gray-400 font-normal">.</span></span>
         </Link>
 
-        {/* Desktop Nav — icon only, tooltip on hover */}
-        <nav className="hidden md:flex items-center gap-0.5 flex-1">
+        {/* Desktop Nav — absolutely centered */}
+        <nav className="hidden md:flex items-center gap-0.5 absolute left-1/2 -translate-x-1/2">
           {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
             const active = isActive(href)
             return (

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ListTodo, CalendarDays, BarChart2, Users, Activity, Building2 } from 'lucide-react'
+import { ListTodo, CalendarDays, BarChart2, Users, Activity } from 'lucide-react'
 import StatusBadge from '@/components/shared/StatusBadge'
 
 // ── Types (minimal, passed from server) ─────────────────────────────────────
@@ -11,11 +11,9 @@ interface TaskItem  { id: string; title: string; priority: string; status: strin
 interface ContentItem { id: string; title: string; status: string; publish_at: string | null; client: { name: string; slug: string } | null }
 interface PipelineItem { key: string; label: string; numColor: string; bg: string; dotColor: string; count: number }
 interface TeamMember { id: string; full_name: string; avatar_url: string | null; contentToday: number; tasksToday: number; overdueContent: number; overdueTasks: number }
-interface ClientItem { id: string; name: string; slug: string; status: string; health_score: number | null }
-interface ActivityItem { id: string; actorName: string; action: string; createdAt: string }
+interface ActivityItem { id: string; actorName: string; action: string; entityType: string | null; entityId: string | null; createdAt: string }
 interface TaskPriority { value: string; label: string; color: string }
 interface ContentStatus { value: string; label: string; color: string }
-interface ClientStatus  { value: string; label: string; color: string }
 
 interface Props {
   greeting: string
@@ -26,20 +24,17 @@ interface Props {
   content: ContentItem[]
   pipeline: PipelineItem[]
   team: TeamMember[]
-  clients: ClientItem[]
   activity: ActivityItem[]
   taskPriorities: TaskPriority[]
   contentStatuses: ContentStatus[]
-  clientStatuses: ClientStatus[]
 }
 
 const TABS = [
-  { id: 'tasks',    label: 'My Tasks',          icon: ListTodo   },
-  { id: 'content',  label: 'Upcoming Content',   icon: CalendarDays },
-  { id: 'pipeline', label: 'Content Pipeline',   icon: BarChart2  },
-  { id: 'team',     label: 'Team Overview',      icon: Users      },
-  { id: 'activity', label: 'Activity',           icon: Activity   },
-  { id: 'clients',  label: 'Client Health',      icon: Building2  },
+  { id: 'tasks',    label: 'My Tasks',         icon: ListTodo   },
+  { id: 'content',  label: 'Upcoming Content',  icon: CalendarDays },
+  { id: 'pipeline', label: 'Content Pipeline',  icon: BarChart2  },
+  { id: 'team',     label: 'Team Overview',     icon: Users      },
+  { id: 'activity', label: 'Activity',          icon: Activity   },
 ]
 
 // Shared card class — solid approximated color so tab notch corners blend perfectly
@@ -70,8 +65,8 @@ function dueDateLabel(due: string | null) {
 
 export default function DashboardTabs({
   greeting, firstName, todayLabel, heroStats,
-  tasks, content, pipeline, team, clients, activity,
-  taskPriorities, contentStatuses, clientStatuses,
+  tasks, content, pipeline, team, activity,
+  taskPriorities, contentStatuses,
 }: Props) {
   const [activeTab, setActiveTab] = useState('tasks')
 
@@ -314,64 +309,47 @@ export default function DashboardTabs({
           {/* ACTIVITY */}
           {activeTab === 'activity' && (
             <>
-              <div className="px-6 py-4 border-b border-white/40">
-                <h2 className="font-semibold text-gray-900">Recent Activity</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Everything happening in your workspace</p>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-white/40">
+                <div>
+                  <h2 className="font-semibold text-gray-900">Activity</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">All actions by you and your team</p>
+                </div>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2.5 py-1 rounded-full">{activity.length} events</span>
               </div>
               {activity.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-16">No activity yet</p>
               ) : (
-                <div className="divide-y divide-gray-50/80">
-                  {activity.map((log) => (
-                    <div key={log.id} className="flex items-start gap-4 px-6 py-4 hover:bg-white/30 transition-colors">
-                      <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 mt-0.5">
-                        {log.actorName.charAt(0).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-700">
-                          <span className="font-semibold text-gray-900">{log.actorName}</span>
-                          {' '}{log.action.replace(/_/g, ' ')}
-                        </p>
-                        <p className="text-xs text-gray-400 mt-0.5">
-                          {new Date(log.createdAt).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* CLIENT HEALTH */}
-          {activeTab === 'clients' && (
-            <div className="p-6">
-              {clients.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-12">No active clients</p>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {clients.map((client) => {
-                    const st = clientStatuses.find(s => s.value === client.status)
+                <div className="divide-y divide-gray-100/60">
+                  {activity.map((log) => {
+                    const entityLabel = log.entityType
+                      ? log.entityType.replace(/_/g, ' ')
+                      : null
+                    const verb = log.action.replace(/_/g, ' ')
                     return (
-                      <Link key={client.id} href={`/app/clients/${client.slug}`}
-                        className="bg-white/50 rounded-xl border border-white/60 p-4 hover:bg-white/70 transition-all group">
-                        <p className="font-semibold text-gray-900 truncate group-hover:text-gray-700 mb-3 text-sm">{client.name}</p>
-                        <div className="flex items-center justify-between">
-                          {st && <StatusBadge label={st.label} color={st.color} />}
-                          {client.health_score && (
-                            <div className="flex gap-0.5">
-                              {[1,2,3,4,5].map(i => (
-                                <div key={i} className={`w-1.5 h-3.5 rounded-sm ${i <= client.health_score! ? 'bg-gray-800' : 'bg-gray-200'}`} />
-                              ))}
-                            </div>
-                          )}
+                      <div key={log.id} className="flex items-start gap-4 px-6 py-3.5 hover:bg-white/30 transition-colors">
+                        {/* Avatar */}
+                        <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600 shrink-0 mt-0.5">
+                          {log.actorName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                         </div>
-                      </Link>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-700 leading-snug">
+                            <span className="font-semibold text-gray-900">{log.actorName}</span>
+                            {' '}
+                            <span>{verb}</span>
+                            {entityLabel && (
+                              <span className="ml-1 text-xs font-medium text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md">{entityLabel}</span>
+                            )}
+                          </p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">
+                            {new Date(log.createdAt).toLocaleString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
                     )
                   })}
                 </div>
               )}
-            </div>
+            </>
           )}
 
         </div>{/* /tab panels */}
