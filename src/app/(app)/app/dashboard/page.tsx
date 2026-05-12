@@ -207,13 +207,8 @@ export default async function DashboardPage() {
     { label: 'Overdue items',     value: stats.overdueTasks ?? 0,    href: '/app/tasks?date=overdue',    warn: (stats.overdueTasks ?? 0) > 0 },
   ]
 
-  // Pastel palettes — cycling per index, no purple
-  const ITEM_PASTELS = ['bg-emerald-100','bg-sky-100','bg-pink-100','bg-amber-100','bg-teal-100','bg-rose-100','bg-orange-100']
-  const CLIENT_PASTELS = ['bg-emerald-100','bg-teal-100','bg-sky-100','bg-pink-100','bg-orange-100','bg-amber-100','bg-cyan-100','bg-rose-100']
-  const TEAM_PASTELS   = ['bg-emerald-50','bg-sky-50','bg-pink-50','bg-amber-50','bg-teal-50','bg-rose-50']
-
-  // Card style — white, razor-thin border, no heavy shadow
-  const card = 'bg-white rounded-2xl border border-gray-100 p-6'
+  // Card style — frosted glass so it lifts off the gray bg
+  const card = 'bg-white/80 backdrop-blur-md rounded-2xl border border-white shadow-sm p-6'
 
   return (
     <div className="p-6 bg-white min-h-full">
@@ -258,16 +253,16 @@ export default async function DashboardPage() {
           {myTasks.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No pending tasks 🎉</p>
           ) : (
-            <div className="space-y-2">
-              {myTasks.map((task, i) => {
+            <div className="space-y-1">
+              {myTasks.map((task) => {
                 const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
                 return (
                   <Link key={task.id} href={`/app/tasks/${task.id}`}
-                    className={`flex items-center gap-3 ${ITEM_PASTELS[i % ITEM_PASTELS.length]} rounded-xl px-4 py-3 group hover:brightness-95 transition-all`}>
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 group transition-colors">
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{task.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
+                      <p className="text-sm font-medium text-gray-800 group-hover:text-gray-900 truncate">{task.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
                     </div>
                   </Link>
                 )
@@ -291,15 +286,15 @@ export default async function DashboardPage() {
           {upcomingContent.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No scheduled content</p>
           ) : (
-            <div className="space-y-2">
-              {upcomingContent.map((item, i) => {
+            <div className="space-y-1">
+              {upcomingContent.map((item) => {
                 const status = CONTENT_STATUSES.find(s => s.value === item.status)
                 return (
                   <Link key={item.id} href={`/app/calendar/${item.id}`}
-                    className={`flex items-center gap-3 ${ITEM_PASTELS[(i + 2) % ITEM_PASTELS.length]} rounded-xl px-4 py-3 group hover:brightness-95 transition-all`}>
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-gray-50 group transition-colors">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">
+                      <p className="text-sm font-medium text-gray-800 group-hover:text-gray-900 truncate">{item.title}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
                         {item.publish_at ? formatDate(item.publish_at, 'dd/MM') : '—'}
                         {item.client ? ` · ${item.client.name}` : ''}
                       </p>
@@ -321,9 +316,9 @@ export default async function DashboardPage() {
           {recentActivity.length === 0 ? (
             <p className="text-sm text-gray-400 text-center py-10">No activity yet</p>
           ) : (
-            <div className="space-y-2">
-              {recentActivity.slice(0, 6).map((log, i) => (
-                <div key={log.id} className={`${ITEM_PASTELS[(i + 4) % ITEM_PASTELS.length]} rounded-xl px-3 py-2.5`}>
+            <div className="space-y-1">
+              {recentActivity.slice(0, 6).map((log) => (
+                <div key={log.id} className="px-3 py-2.5 rounded-xl hover:bg-gray-50 transition-colors">
                   <p className="text-xs text-gray-700 leading-snug">
                     <span className="font-semibold">{log.actor?.full_name?.split(' ')[0] ?? 'Someone'}</span>
                     {' '}{log.action.replace(/_/g, ' ')}
@@ -366,9 +361,9 @@ export default async function DashboardPage() {
             <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full font-medium">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }, pi) => (
+            {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }) => (
               <div key={profile.id} className={`${card}`}>
-                <div className={`flex items-center gap-3 mb-5 ${TEAM_PASTELS[pi % TEAM_PASTELS.length]} -mx-6 -mt-6 px-6 pt-5 pb-4 rounded-t-2xl`}>
+                <div className="flex items-center gap-3 mb-5 bg-gray-50 -mx-6 -mt-6 px-6 pt-5 pb-4 rounded-t-2xl">
                   <div className="w-9 h-9 rounded-full bg-white/70 flex items-center justify-center text-sm font-bold text-gray-700 shrink-0 overflow-hidden border border-white">
                     {profile.avatar_url
                       ? <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
@@ -400,18 +395,18 @@ export default async function DashboardPage() {
         <div className={`${card} mb-4`}>
           <h3 className="font-semibold text-gray-900 mb-5">Client Health</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {clients.map((client, i) => {
+            {clients.map((client) => {
               const statusDef = CLIENT_STATUSES.find(s => s.value === client.status)
               return (
                 <Link key={client.id} href={`/app/clients/${client.slug}`}
-                  className={`${CLIENT_PASTELS[i % CLIENT_PASTELS.length]} rounded-2xl p-4 hover:brightness-95 transition-all group`}>
-                  <p className="font-semibold text-gray-900 truncate">{client.name}</p>
+                  className="bg-gray-50 hover:bg-gray-100 rounded-xl p-4 transition-colors group">
+                  <p className="font-semibold text-gray-900 truncate group-hover:text-gray-700">{client.name}</p>
                   <div className="flex items-center justify-between mt-3">
                     {statusDef && <StatusBadge label={statusDef.label} color={statusDef.color} />}
                     {client.health_score && (
                       <div className="flex gap-0.5">
                         {[1, 2, 3, 4, 5].map(j => (
-                          <div key={j} className={`w-1.5 h-3 rounded-sm ${j <= client.health_score! ? 'bg-gray-700' : 'bg-white/60'}`} />
+                          <div key={j} className={`w-1.5 h-3 rounded-sm ${j <= client.health_score! ? 'bg-gray-700' : 'bg-gray-200'}`} />
                         ))}
                       </div>
                     )}
