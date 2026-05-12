@@ -126,7 +126,7 @@
 .tab-active-shape::after {
   content: '';
   position: absolute;
-  bottom: -1px;
+  bottom: -8px;
   width: 14px;
   height: 14px;
   background: transparent;
