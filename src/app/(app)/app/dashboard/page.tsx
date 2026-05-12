@@ -193,68 +193,42 @@ export default async function DashboardPage() {
     return { profile, tasksToday, overdueTasks, contentToday, overdueContent }
   })
 
-  const kpis = [
-    {
-      label: 'Active Clients',
-      value: stats.activeClients ?? 0,
-      href: '/app/clients?status=active',
-      Icon: Building2,
-      iconBg: 'bg-blue-50',
-      iconColor: 'text-blue-500',
-      topBorder: 'border-t-blue-500',
-      numColor: 'text-blue-600',
-    },
-    {
-      label: 'Tasks Due Today',
-      value: stats.tasksDueToday ?? 0,
-      href: '/app/tasks?date=today',
-      Icon: ListTodo,
-      iconBg: 'bg-amber-50',
-      iconColor: 'text-amber-500',
-      topBorder: 'border-t-amber-400',
-      numColor: 'text-amber-600',
-    },
-    {
-      label: 'Content This Week',
-      value: stats.contentThisWeek ?? 0,
-      href: '/app/calendar',
-      Icon: CalendarDays,
-      iconBg: 'bg-violet-50',
-      iconColor: 'text-violet-500',
-      topBorder: 'border-t-violet-500',
-      numColor: 'text-violet-600',
-    },
-    {
-      label: 'Overdue Items',
-      value: stats.overdueTasks ?? 0,
-      href: '/app/tasks?date=overdue',
-      Icon: AlertTriangle,
-      iconBg: 'bg-red-50',
-      iconColor: 'text-red-500',
-      topBorder: 'border-t-red-400',
-      numColor: 'text-red-600',
-    },
+  // Greeting
+  const { data: currentProfile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
+  const firstName = (currentProfile?.full_name ?? '').split(' ')[0] || 'there'
+  const hourNow = new Date().getHours()
+  const greeting = hourNow < 12 ? 'Good morning' : hourNow < 17 ? 'Good afternoon' : 'Good evening'
+  const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+
+  const heroStats = [
+    { label: 'Active clients',    value: stats.activeClients ?? 0,   href: '/app/clients?status=active', color: 'text-violet-600' },
+    { label: 'Due today',         value: stats.tasksDueToday ?? 0,    href: '/app/tasks?date=today',      color: 'text-amber-500'  },
+    { label: 'Content this week', value: stats.contentThisWeek ?? 0,  href: '/app/calendar',              color: 'text-lime-600'   },
+    { label: 'Overdue items',     value: stats.overdueTasks ?? 0,     href: '/app/tasks?date=overdue',    color: (stats.overdueTasks ?? 0) > 0 ? 'text-red-500' : 'text-slate-300' },
   ]
 
   return (
     <div className="p-6">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {kpis.map(({ label, value, href, Icon, iconBg, iconColor, topBorder, numColor }) => (
-          <Link
-            key={label}
-            href={href}
-            className={`bg-white rounded-xl border border-gray-200 border-t-2 ${topBorder} p-5 hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer block group`}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`w-10 h-10 rounded-lg ${iconBg} flex items-center justify-center`}>
-                <Icon className={`w-5 h-5 ${iconColor}`} />
-              </div>
-            </div>
-            <p className={`text-3xl font-bold ${numColor} mb-1 leading-none`}>{value}</p>
-            <p className="text-sm text-gray-500 mt-1.5">{label}</p>
-          </Link>
-        ))}
+      {/* Greeting Banner — cockpit hero */}
+      <div className="bg-gradient-to-r from-violet-50 via-violet-50/40 to-white rounded-2xl border border-violet-100 px-7 py-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+              {greeting}, {firstName}! 👋
+            </h1>
+            <p className="text-sm text-slate-400 mt-1">{todayLabel}</p>
+          </div>
+          <div className="flex gap-8 sm:gap-10">
+            {heroStats.map(({ label, value, href, color }) => (
+              <Link key={label} href={href} className="text-center group">
+                <p className={`text-4xl font-bold tabular-nums leading-none ${color} group-hover:opacity-80 transition-opacity`}>
+                  {value}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1.5 whitespace-nowrap">{label}</p>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">

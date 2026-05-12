@@ -109,11 +109,11 @@ function CommandPalette() {
   if (!open) return (
     <button
       onClick={() => setOpen(true)}
-      className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors w-56"
+      className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 bg-slate-50 hover:bg-violet-50 border border-slate-200 hover:border-violet-200 rounded-lg transition-colors w-56"
     >
       <Search size={12} />
       <span>Search or run command…</span>
-      <kbd className="ml-auto text-[10px] bg-white border border-gray-200 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
+      <kbd className="ml-auto text-[10px] bg-white border border-slate-200 px-1.5 py-0.5 rounded font-mono">⌘K</kbd>
     </button>
   )
 
