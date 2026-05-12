@@ -209,32 +209,27 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6">
-      {/* Greeting Banner */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm px-8 py-6 mb-5">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-          <div>
-            <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-tight">
-              {greeting}, {firstName}! 👋
-            </h1>
-            <p className="text-sm text-slate-400 mt-1.5">{todayLabel}</p>
-          </div>
+      {/* Greeting — no box, sits directly on gradient */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 px-2 mb-8">
+        <div>
+          <h1 className="text-[1.75rem] font-bold text-slate-900 tracking-tight leading-tight">
+            {greeting}, {firstName}! 👋
+          </h1>
+          <p className="text-sm text-slate-500 mt-1.5">{todayLabel}</p>
+        </div>
 
-          {/* Divider */}
-          <div className="hidden sm:block w-px h-14 bg-gray-100" />
-
-          {/* Hero stats — size = impact, not colour */}
-          <div className="flex gap-8 sm:gap-12">
-            {heroStats.map(({ label, value, href, warn }) => (
-              <Link key={label} href={href} className="text-center group">
-                <p className={`text-4xl font-bold tabular-nums leading-none tracking-tight transition-opacity group-hover:opacity-60 ${warn ? 'text-red-500' : 'text-slate-900'}`}>
-                  {value}
-                </p>
-                <p className="text-[11px] text-slate-400 mt-2 whitespace-nowrap font-medium uppercase tracking-wide">
-                  {label}
-                </p>
-              </Link>
-            ))}
-          </div>
+        {/* Hero stats */}
+        <div className="flex gap-10 sm:gap-14">
+          {heroStats.map(({ label, value, href, warn }) => (
+            <Link key={label} href={href} className="text-center group">
+              <p className={`text-4xl font-bold tabular-nums leading-none tracking-tight transition-opacity group-hover:opacity-60 ${warn ? 'text-red-500' : 'text-slate-900'}`}>
+                {value}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-2 whitespace-nowrap font-medium uppercase tracking-wide">
+                {label}
+              </p>
+            </Link>
+          ))}
         </div>
       </div>
 
@@ -253,13 +248,13 @@ export default async function DashboardPage() {
           {myTasks.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No pending tasks 🎉</p>
           ) : (
-            <div className="space-y-2">
-              {myTasks.map((task) => {
+            <div className="bg-slate-50 rounded-xl overflow-hidden">
+              {myTasks.map((task, i) => {
                 const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
                 return (
                   <Link key={task.id} href={`/app/tasks/${task.id}`}
-                    className="flex items-center gap-3 bg-slate-50 hover:bg-violet-50 rounded-xl px-4 py-3 group transition-colors">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-violet-50 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
+                    <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{task.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
@@ -283,12 +278,12 @@ export default async function DashboardPage() {
           {upcomingContent.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No scheduled content</p>
           ) : (
-            <div className="space-y-2">
-              {upcomingContent.map((item) => {
+            <div className="bg-slate-50 rounded-xl overflow-hidden">
+              {upcomingContent.map((item, i) => {
                 const status = CONTENT_STATUSES.find(s => s.value === item.status)
                 return (
                   <Link key={item.id} href={`/app/calendar/${item.id}`}
-                    className="flex items-center gap-3 bg-slate-50 hover:bg-violet-50 rounded-xl px-4 py-3 group transition-colors">
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-violet-50 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{item.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -313,9 +308,9 @@ export default async function DashboardPage() {
           {recentActivity.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No activity yet</p>
           ) : (
-            <div className="space-y-2">
-              {recentActivity.slice(0, 6).map((log) => (
-                <div key={log.id} className="bg-slate-50 rounded-xl px-3 py-2.5">
+            <div className="bg-slate-50 rounded-xl overflow-hidden">
+              {recentActivity.slice(0, 6).map((log, i) => (
+                <div key={log.id} className={`px-3 py-2.5 ${i !== 0 ? 'border-t border-white' : ''}`}>
                   <p className="text-xs text-slate-700 leading-snug">
                     <span className="font-semibold">{log.actor?.full_name?.split(' ')[0] ?? 'Someone'}</span>
                     {' '}{log.action.replace(/_/g, ' ')}
