@@ -5,7 +5,7 @@ import { TASK_PRIORITIES, CONTENT_STATUSES, CLIENT_STATUSES } from '@/lib/consta
 import Link from 'next/link'
 import StatusBadge from '@/components/shared/StatusBadge'
 import type { Task, ContentItem, ActivityLog } from '@/types/database.types'
-import { Building2, ListTodo, CalendarDays, AlertTriangle, Plus, FileText, CheckCheck, Trash2 } from 'lucide-react'
+import { Building2, ListTodo, CalendarDays, AlertTriangle } from 'lucide-react'
 
 type TaskWithClient = Task & { client?: { name: string; slug: string } | null }
 type ContentWithClient = ContentItem & { client?: { name: string; slug: string } | null }
@@ -201,30 +201,37 @@ export default async function DashboardPage() {
   const todayLabel = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
 
   const heroStats = [
-    { label: 'Active clients',    value: stats.activeClients ?? 0,   href: '/app/clients?status=active', color: 'text-violet-600' },
-    { label: 'Due today',         value: stats.tasksDueToday ?? 0,    href: '/app/tasks?date=today',      color: 'text-amber-500'  },
-    { label: 'Content this week', value: stats.contentThisWeek ?? 0,  href: '/app/calendar',              color: 'text-lime-600'   },
-    { label: 'Overdue items',     value: stats.overdueTasks ?? 0,     href: '/app/tasks?date=overdue',    color: (stats.overdueTasks ?? 0) > 0 ? 'text-red-500' : 'text-slate-300' },
+    { label: 'Active clients',    value: stats.activeClients ?? 0,  href: '/app/clients?status=active', warn: false },
+    { label: 'Due today',         value: stats.tasksDueToday ?? 0,   href: '/app/tasks?date=today',      warn: false },
+    { label: 'Content this week', value: stats.contentThisWeek ?? 0, href: '/app/calendar',              warn: false },
+    { label: 'Overdue items',     value: stats.overdueTasks ?? 0,    href: '/app/tasks?date=overdue',    warn: (stats.overdueTasks ?? 0) > 0 },
   ]
 
   return (
     <div className="p-6">
-      {/* Greeting Banner — cockpit hero */}
-      <div className="bg-gradient-to-r from-violet-50 via-violet-50/40 to-white rounded-2xl border border-violet-100 px-7 py-6 mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+      {/* Greeting Banner */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm px-8 py-6 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-tight">
               {greeting}, {firstName}! 👋
             </h1>
-            <p className="text-sm text-slate-400 mt-1">{todayLabel}</p>
+            <p className="text-sm text-slate-400 mt-1.5">{todayLabel}</p>
           </div>
-          <div className="flex gap-8 sm:gap-10">
-            {heroStats.map(({ label, value, href, color }) => (
+
+          {/* Divider */}
+          <div className="hidden sm:block w-px h-14 bg-gray-100" />
+
+          {/* Hero stats — size = impact, not colour */}
+          <div className="flex gap-8 sm:gap-12">
+            {heroStats.map(({ label, value, href, warn }) => (
               <Link key={label} href={href} className="text-center group">
-                <p className={`text-4xl font-bold tabular-nums leading-none ${color} group-hover:opacity-80 transition-opacity`}>
+                <p className={`text-4xl font-bold tabular-nums leading-none tracking-tight transition-opacity group-hover:opacity-60 ${warn ? 'text-red-500' : 'text-slate-900'}`}>
                   {value}
                 </p>
-                <p className="text-[11px] text-slate-400 mt-1.5 whitespace-nowrap">{label}</p>
+                <p className="text-[11px] text-slate-400 mt-2 whitespace-nowrap font-medium uppercase tracking-wide">
+                  {label}
+                </p>
               </Link>
             ))}
           </div>
@@ -296,29 +303,20 @@ export default async function DashboardPage() {
             <p className="text-sm text-gray-400 text-center py-8">No activity yet</p>
           ) : (
             <div>
-              {recentActivity.slice(0, 8).map((log) => {
-                const isCreate = log.action === 'created'
-                const isDelete = log.action === 'deleted'
-                const ActionIcon = isCreate ? Plus : isDelete ? Trash2 : isCreate ? FileText : CheckCheck
-                const iconBg = isCreate ? 'bg-green-50' : isDelete ? 'bg-red-50' : 'bg-blue-50'
-                const iconColor = isCreate ? 'text-green-500' : isDelete ? 'text-red-500' : 'text-blue-500'
-                return (
-                  <div key={log.id} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
-                    <div className={`w-6 h-6 rounded-md ${iconBg} flex items-center justify-center shrink-0 mt-0.5`}>
-                      <ActionIcon className={`w-3 h-3 ${iconColor}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-700 leading-snug">
-                        <span className="font-medium">{log.actor?.full_name ?? 'Someone'}</span>
-                        {' '}{log.action.replace(/_/g, ' ')}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
-                    </div>
+              {recentActivity.slice(0, 8).map((log) => (
+                <div key={log.id} className="flex gap-3 py-2.5 border-b border-gray-50 last:border-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-violet-300 mt-2 shrink-0" />
+                  <div>
+                    <p className="text-sm text-gray-700 leading-snug">
+                      <span className="font-medium">{log.actor?.full_name ?? 'Someone'}</span>
+                      {' '}{log.action.replace(/_/g, ' ')}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                    </p>
                   </div>
-                )
-              })}
+                </div>
+              ))}
             </div>
           )}
         </div>
