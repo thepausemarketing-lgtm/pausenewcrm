@@ -210,7 +210,7 @@ export default async function DashboardPage() {
   return (
     <div className="p-6">
       {/* Greeting Banner */}
-      <div className="bg-white rounded-2xl shadow-sm px-8 py-6 mb-5">
+      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm px-8 py-6 mb-5">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
           <div>
             <h1 className="text-[1.6rem] font-bold text-slate-900 tracking-tight leading-tight">
@@ -242,21 +242,24 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
 
         {/* My Tasks — wider (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-slate-800">My Tasks</h3>
+        <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">My Tasks</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Things waiting for you</p>
+            </div>
             <Link href="/app/tasks" className="text-xs text-slate-400 hover:text-violet-600 transition-colors">View all →</Link>
           </div>
           {myTasks.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No pending tasks 🎉</p>
           ) : (
-            <div className="space-y-0">
+            <div className="space-y-2">
               {myTasks.map((task) => {
                 const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
                 return (
                   <Link key={task.id} href={`/app/tasks/${task.id}`}
-                    className="flex items-start gap-3 py-2.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/60 -mx-2 px-2 rounded-lg transition-colors">
-                    <div className="mt-2 w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
+                    className="flex items-center gap-3 bg-slate-50 hover:bg-violet-50 rounded-xl px-4 py-3 group transition-colors">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{task.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
@@ -269,20 +272,23 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming Content */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-5">
-            <h3 className="text-sm font-semibold text-slate-800">Upcoming Content</h3>
+        <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">Upcoming Content</h3>
+              <p className="text-[11px] text-slate-400 mt-0.5">Scheduled for publishing</p>
+            </div>
             <Link href="/app/calendar" className="text-xs text-slate-400 hover:text-violet-600 transition-colors">View all →</Link>
           </div>
           {upcomingContent.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No scheduled content</p>
           ) : (
-            <div className="space-y-0">
+            <div className="space-y-2">
               {upcomingContent.map((item) => {
                 const status = CONTENT_STATUSES.find(s => s.value === item.status)
                 return (
                   <Link key={item.id} href={`/app/calendar/${item.id}`}
-                    className="flex items-center gap-3 py-2.5 border-b border-slate-50 last:border-0 group hover:bg-slate-50/60 -mx-2 px-2 rounded-lg transition-colors">
+                    className="flex items-center gap-3 bg-slate-50 hover:bg-violet-50 rounded-xl px-4 py-3 group transition-colors">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{item.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -299,24 +305,24 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Activity — narrow (1 col) */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-slate-800 mb-5">Activity</h3>
+        <div className="lg:col-span-1 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+          <div className="mb-4">
+            <h3 className="text-sm font-semibold text-slate-800">Activity</h3>
+            <p className="text-[11px] text-slate-400 mt-0.5">Latest updates</p>
+          </div>
           {recentActivity.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No activity yet</p>
           ) : (
-            <div className="space-y-0">
-              {recentActivity.slice(0, 8).map((log) => (
-                <div key={log.id} className="flex gap-2.5 py-2.5 border-b border-slate-50 last:border-0">
-                  <div className="w-1.5 h-1.5 rounded-full bg-violet-300 mt-2 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-xs text-slate-700 leading-snug">
-                      <span className="font-semibold">{log.actor?.full_name?.split(' ')[0] ?? 'Someone'}</span>
-                      {' '}{log.action.replace(/_/g, ' ')}
-                    </p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">
-                      {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                    </p>
-                  </div>
+            <div className="space-y-2">
+              {recentActivity.slice(0, 6).map((log) => (
+                <div key={log.id} className="bg-slate-50 rounded-xl px-3 py-2.5">
+                  <p className="text-xs text-slate-700 leading-snug">
+                    <span className="font-semibold">{log.actor?.full_name?.split(' ')[0] ?? 'Someone'}</span>
+                    {' '}{log.action.replace(/_/g, ' ')}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">
+                    {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                  </p>
                 </div>
               ))}
             </div>
@@ -326,7 +332,7 @@ export default async function DashboardPage() {
 
       {/* Content Pipeline */}
       <div className="mb-5">
-        <div className="bg-white rounded-2xl shadow-sm p-6">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
           <h3 className="text-sm font-semibold text-slate-800 mb-5">Content Pipeline</h3>
           <div className="grid grid-cols-5 gap-3">
             {pipelineItems.map(({ key, label, numColor, bg, dotColor }) => {
@@ -358,7 +364,7 @@ export default async function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }) => (
-              <div key={profile.id} className="bg-white rounded-2xl shadow-sm p-6">
+              <div key={profile.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
                 <div className="flex items-center gap-3 mb-5">
                   <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0 overflow-hidden">
                     {profile.avatar_url
@@ -393,7 +399,7 @@ export default async function DashboardPage() {
 
       {/* Client Health Grid */}
       {clients.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-5">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6 mb-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-5">Client Health</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {clients.map((client) => {
