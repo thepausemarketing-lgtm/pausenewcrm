@@ -42,8 +42,8 @@ const TABS = [
   { id: 'clients',  label: 'Client Health',      icon: Building2  },
 ]
 
-// Shared card class
-const card = 'bg-white/55 backdrop-blur-xl rounded-2xl border border-white/70 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
+// Shared card class — solid approximated color so tab notch corners blend perfectly
+const card = 'bg-[rgb(243,245,249)] rounded-2xl border border-white/70 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
 // Inner card for pipeline/team grids nested inside the main card
 const innerCard = 'bg-white/50 rounded-xl border border-white/60'
 
@@ -110,7 +110,7 @@ export default function DashboardTabs({
             onClick={() => setActiveTab(id)}
             className={`flex items-center gap-2 text-sm font-medium transition-all ${
               activeTab === id
-                ? 'tab-active-shape bg-white/55 backdrop-blur-xl border-t border-l border-r border-white/70 shadow-[0_-2px_16px_rgba(0,0,0,0.07)] px-6 py-3.5 -mb-2 text-gray-900 font-semibold relative z-10'
+                ? 'tab-active-shape bg-[rgb(243,245,249)] border-t border-l border-r border-white/70 shadow-[0_-2px_16px_rgba(0,0,0,0.07)] px-6 py-3.5 -mb-2 text-gray-900 font-semibold relative z-10'
                 : 'px-5 py-2.5 text-gray-400 hover:text-gray-700 hover:bg-white/30 rounded-xl'
             }`}
           >
