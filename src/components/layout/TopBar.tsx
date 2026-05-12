@@ -109,7 +109,7 @@ function CommandPalette() {
   if (!open) return (
     <button
       onClick={() => setOpen(true)}
-      className="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-400 bg-slate-50 hover:bg-violet-50 border border-slate-200 hover:border-violet-200 rounded-lg transition-colors w-56"
+      className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-400 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors w-56"
     >
       <Search size={12} />
       <span>Search or run command…</span>
@@ -267,7 +267,7 @@ export default function TopBar() {
   }, [])
 
   return (
-    <header className="h-12 bg-white/80 backdrop-blur border-b border-violet-100/60 flex items-center justify-between px-6 shrink-0 relative">
+    <header className="h-12 bg-white border-b border-gray-100 flex items-center justify-between px-6 shrink-0 relative">
       <div className="flex items-center gap-2">
         {/* Hamburger button: only visible on mobile */}
         <button

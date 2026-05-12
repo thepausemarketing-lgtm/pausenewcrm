@@ -48,26 +48,25 @@ export default function Sidebar() {
 
   const sidebarContent = (
     <aside
-      style={{ backgroundColor: '#f0eeff' }}
       className={cn(
-        'h-full flex flex-col transition-all duration-200 shrink-0 border-r border-violet-200/60',
+        'h-full flex flex-col transition-all duration-200 shrink-0 bg-white border-r border-gray-100',
         collapsed ? 'w-14' : 'w-56'
       )}
     >
       {/* Logo */}
       <div className={cn(
-        'flex items-center h-14 px-4 border-b border-violet-200/50',
+        'flex items-center h-14 px-4 border-b border-gray-100',
         collapsed ? 'justify-center' : 'justify-between'
       )}>
         {!collapsed && (
           <div className="flex items-center gap-2.5">
-            <div className="w-6 h-6 rounded-lg bg-violet-600 shrink-0 flex items-center justify-center text-white text-xs font-bold shadow-sm">P</div>
-            <span className="text-sm font-semibold text-slate-800 truncate">Pause Marketing</span>
+            <div className="w-6 h-6 rounded-lg bg-gray-900 shrink-0 flex items-center justify-center text-white text-xs font-bold">P</div>
+            <span className="text-sm font-semibold text-gray-900 truncate">Pause Marketing</span>
           </div>
         )}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="p-1 rounded-md text-slate-400 hover:text-slate-700 hover:bg-violet-100 transition-colors"
+          className="p-1 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
         >
           {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
         </button>
@@ -86,14 +85,14 @@ export default function Sidebar() {
                 'flex items-center gap-3 px-3 py-2 mx-2 rounded-lg text-sm transition-all relative',
                 collapsed ? 'justify-center' : '',
                 active
-                  ? 'bg-white shadow-sm text-violet-700 font-medium'
-                  : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'
+                  ? 'bg-gray-100 text-gray-900 font-medium'
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
               )}
             >
               {active && !collapsed && (
                 <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-lime-400 rounded-r-full" />
               )}
-              <Icon size={16} className={active ? 'text-violet-600' : ''} />
+              <Icon size={16} />
               {!collapsed && <span>{label}</span>}
             </Link>
           )
@@ -101,7 +100,7 @@ export default function Sidebar() {
       </nav>
 
       {/* Bottom: Settings + User */}
-      <div className="border-t border-violet-200/50 p-3 space-y-0.5">
+      <div className="border-t border-gray-100 p-3 space-y-0.5">
         <Link
           href="/app/settings/profile"
           onClick={handleNavClick}
@@ -109,14 +108,14 @@ export default function Sidebar() {
             'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all relative',
             collapsed ? 'justify-center' : '',
             pathname.startsWith('/app/settings')
-              ? 'bg-white shadow-sm text-violet-700 font-medium'
-              : 'text-slate-500 hover:text-slate-800 hover:bg-white/70'
+              ? 'bg-gray-100 text-gray-900 font-medium'
+              : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
           )}
         >
           {pathname.startsWith('/app/settings') && !collapsed && (
             <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 bg-lime-400 rounded-r-full" />
           )}
-          <Settings size={16} className={pathname.startsWith('/app/settings') ? 'text-violet-600' : ''} />
+          <Settings size={16} />
           {!collapsed && <span>Settings</span>}
         </Link>
 
@@ -126,20 +125,20 @@ export default function Sidebar() {
         )}>
           <Avatar className="h-7 w-7 shrink-0">
             <AvatarImage src={profile?.avatar_url ?? undefined} />
-            <AvatarFallback className="text-[10px] bg-violet-600 text-white font-semibold">
+            <AvatarFallback className="text-[10px] bg-gray-800 text-white font-semibold">
               {profile?.full_name ? getInitials(profile.full_name) : '?'}
             </AvatarFallback>
           </Avatar>
           {!collapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-slate-800 truncate">{profile?.full_name}</p>
-              <p className="text-[10px] text-slate-400 capitalize">{profile?.role}</p>
+              <p className="text-xs font-medium text-gray-800 truncate">{profile?.full_name}</p>
+              <p className="text-[10px] text-gray-400 capitalize">{profile?.role}</p>
             </div>
           )}
           {!collapsed && (
             <button
               onClick={handleSignOut}
-              className="p-1 rounded text-slate-400 hover:text-slate-700 hover:bg-violet-100 transition-colors"
+              className="p-1 rounded text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
               title="Sign out"
             >
               <LogOut size={13} />

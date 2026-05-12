@@ -92,7 +92,7 @@ export default async function DashboardPage() {
     { key: 'draft',     label: 'Draft',      numColor: 'text-gray-700',    bg: 'bg-gray-50',    dotColor: 'bg-gray-300' },
     { key: 'in_review', label: 'In Review',  numColor: 'text-amber-700',   bg: 'bg-amber-50',   dotColor: 'bg-amber-400' },
     { key: 'approved',  label: 'Approved',   numColor: 'text-blue-700',    bg: 'bg-blue-50',    dotColor: 'bg-blue-500' },
-    { key: 'scheduled', label: 'Scheduled',  numColor: 'text-violet-700',  bg: 'bg-violet-50',  dotColor: 'bg-violet-500' },
+    { key: 'scheduled', label: 'Scheduled',  numColor: 'text-indigo-700',  bg: 'bg-indigo-50',  dotColor: 'bg-indigo-400' },
     { key: 'published', label: 'Published',  numColor: 'text-green-700',   bg: 'bg-green-50',   dotColor: 'bg-green-500' },
   ]
 
@@ -237,13 +237,13 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
 
         {/* My Tasks — wider (2 cols) */}
-        <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-semibold text-slate-800">My Tasks</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">Things waiting for you</p>
             </div>
-            <Link href="/app/tasks" className="text-xs text-slate-400 hover:text-violet-600 transition-colors">View all →</Link>
+            <Link href="/app/tasks" className="text-xs text-slate-400 hover:text-gray-700 transition-colors">View all →</Link>
           </div>
           {myTasks.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No pending tasks 🎉</p>
@@ -253,7 +253,7 @@ export default async function DashboardPage() {
                 const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
                 return (
                   <Link key={task.id} href={`/app/tasks/${task.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-violet-50 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-100 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{task.title}</p>
@@ -267,13 +267,13 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming Content */}
-        <div className="lg:col-span-2 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-sm font-semibold text-slate-800">Upcoming Content</h3>
               <p className="text-[11px] text-slate-400 mt-0.5">Scheduled for publishing</p>
             </div>
-            <Link href="/app/calendar" className="text-xs text-slate-400 hover:text-violet-600 transition-colors">View all →</Link>
+            <Link href="/app/calendar" className="text-xs text-slate-400 hover:text-gray-700 transition-colors">View all →</Link>
           </div>
           {upcomingContent.length === 0 ? (
             <p className="text-sm text-slate-400 text-center py-10">No scheduled content</p>
@@ -283,7 +283,7 @@ export default async function DashboardPage() {
                 const status = CONTENT_STATUSES.find(s => s.value === item.status)
                 return (
                   <Link key={item.id} href={`/app/calendar/${item.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-violet-50 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
+                    className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-100 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{item.title}</p>
                       <p className="text-xs text-slate-400 mt-0.5">
@@ -300,7 +300,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Recent Activity — narrow (1 col) */}
-        <div className="lg:col-span-1 bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm p-6">
           <div className="mb-4">
             <h3 className="text-sm font-semibold text-slate-800">Activity</h3>
             <p className="text-[11px] text-slate-400 mt-0.5">Latest updates</p>
@@ -327,7 +327,7 @@ export default async function DashboardPage() {
 
       {/* Content Pipeline */}
       <div className="mb-5">
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+        <div className="bg-white rounded-2xl shadow-sm p-6">
           <h3 className="text-sm font-semibold text-slate-800 mb-5">Content Pipeline</h3>
           <div className="grid grid-cols-5 gap-3">
             {pipelineItems.map(({ key, label, numColor, bg, dotColor }) => {
@@ -355,13 +355,13 @@ export default async function DashboardPage() {
         <div className="mb-5">
           <div className="flex items-center gap-2 mb-4">
             <h2 className="text-sm font-semibold text-slate-800">Team Overview</h2>
-            <span className="text-xs bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full font-medium">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
+            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }) => (
-              <div key={profile.id} className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6">
+              <div key={profile.id} className="bg-white rounded-2xl shadow-sm p-6">
                 <div className="flex items-center gap-3 mb-5">
-                  <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-sm font-bold text-violet-700 shrink-0 overflow-hidden">
+                  <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700 shrink-0 overflow-hidden">
                     {profile.avatar_url
                       ? <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                       : profile.full_name?.charAt(0).toUpperCase()}
@@ -369,9 +369,9 @@ export default async function DashboardPage() {
                   <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-violet-50 rounded-xl p-3">
-                    <p className="text-[10px] text-violet-400 mb-1.5 font-semibold uppercase tracking-wider">Content</p>
-                    <p className="text-2xl font-bold text-violet-700">{contentToday}</p>
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <p className="text-[10px] text-gray-400 mb-1.5 font-semibold uppercase tracking-wider">Content</p>
+                    <p className="text-2xl font-bold text-gray-800">{contentToday}</p>
                   </div>
                   <div className="bg-amber-50 rounded-xl p-3">
                     <p className="text-[10px] text-amber-400 mb-1.5 font-semibold uppercase tracking-wider">Tasks</p>
@@ -394,14 +394,14 @@ export default async function DashboardPage() {
 
       {/* Client Health Grid */}
       {clients.length > 0 && (
-        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-sm p-6 mb-5">
+        <div className="bg-white rounded-2xl shadow-sm p-6 mb-5">
           <h3 className="text-sm font-semibold text-slate-800 mb-5">Client Health</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {clients.map((client) => {
               const statusDef = CLIENT_STATUSES.find(s => s.value === client.status)
               return (
                 <Link key={client.id} href={`/app/clients/${client.slug}`}
-                  className="bg-slate-50 hover:bg-violet-50 rounded-xl p-4 transition-colors group">
+                  className="bg-slate-50 hover:bg-gray-100 rounded-xl p-4 transition-colors group">
                   <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-violet-700">{client.name}</p>
                   <div className="flex items-center justify-between mt-3">
                     {statusDef && <StatusBadge label={statusDef.label} color={statusDef.color} />}
