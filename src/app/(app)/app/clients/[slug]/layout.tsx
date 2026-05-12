@@ -23,7 +23,7 @@ export default async function ClientLayout({
 }) {
   const { slug } = await params
   const supabase = await createClient()
-  const { data: client } = await supabase.from('clients').select('*').eq('slug', slug).single()
+  const { data: client } = await supabase.from('clients').select('id,name,slug,status,industry,website,monthly_value,currency,health_score').eq('slug', slug).single()
   if (!client) notFound()
 
   const basePath = `/app/clients/${slug}`

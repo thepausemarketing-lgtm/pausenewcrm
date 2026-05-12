@@ -53,7 +53,7 @@ export default function ClientForm({ client, allClients = [], onSuccess }: Props
   // Only show top-level clients as parent options (not sub-brands themselves)
   const parentOptions = allClients.filter(c => !c.parent_client_id && c.id !== client?.id)
 
-  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: client?.name ?? '',
@@ -68,11 +68,6 @@ export default function ClientForm({ client, allClients = [], onSuccess }: Props
       parent_client_id: client?.parent_client_id ?? '',
     },
   })
-
-  const sel = (field: keyof FormData) => (value: string) => {
-    // For unregistered fields handled via register, we use setValue via a workaround
-    // these fields are handled directly with register
-  }
 
   const onSubmit = async (data: FormData) => {
     setError(null)

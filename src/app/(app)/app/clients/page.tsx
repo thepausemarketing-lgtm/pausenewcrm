@@ -16,7 +16,7 @@ export default async function ClientsPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase.from('clients').select('*').order('name')
+  let query = supabase.from('clients').select('id,name,slug,status,industry,monthly_value,currency,health_score,website,parent_client_id').order('name')
 
   if (params.status) query = query.eq('status', params.status as ClientStatus)
   if (params.search) query = query.ilike('name', `%${params.search}%`)

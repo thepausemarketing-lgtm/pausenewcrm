@@ -36,12 +36,12 @@ export default function KeyboardShortcutsHelp() {
       <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-6 w-80">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Keyboard Shortcuts</h3>
         <div className="space-y-3">
-          {SHORTCUTS.map((s, i) => (
-            <div key={i} className="flex items-center justify-between">
+          {SHORTCUTS.map((s) => (
+            <div key={s.description} className="flex items-center justify-between">
               <span className="text-sm text-gray-600">{s.description}</span>
               <div className="flex items-center gap-1">
-                {s.keys.map((k, j) => (
-                  <kbd key={j} className="text-[11px] bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono text-gray-700">{k}</kbd>
+                {s.keys.map((k) => (
+                  <kbd key={k} className="text-[11px] bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-mono text-gray-700">{k}</kbd>
                 ))}
               </div>
             </div>

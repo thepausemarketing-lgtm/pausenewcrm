@@ -17,7 +17,7 @@ export default async function ClientCalendarPage({ params }: { params: Promise<{
 
   const { data: rawItems } = await supabase
     .from('content_items')
-    .select('*')
+    .select('id,title,status,platform,content_type,publish_at')
     .eq('client_id', client.id)
     .order('publish_at', { ascending: true, nullsFirst: false })
 

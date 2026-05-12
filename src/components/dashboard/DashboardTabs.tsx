@@ -47,7 +47,7 @@ function dueDateLabel(due: string | null) {
   return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
 }
 
-function StatChip({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {
+function StatChip({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: number; color: string }) {
   return (
     <div className="flex items-center gap-3 bg-white/60 rounded-xl px-4 py-3 border border-white/70 flex-1">
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color}`}>

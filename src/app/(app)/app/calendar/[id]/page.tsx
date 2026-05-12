@@ -26,9 +26,12 @@ export default async function ContentItemPage({ params }: { params: Promise<{ id
   if (!item) notFound()
 
   const { data: { user } } = await supabase.auth.getUser()
-  const { data: rawProfile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+
+  const [{ data: rawProfile }, { data: rawClients }] = await Promise.all([
+    supabase.from('profiles').select('role').eq('id', user!.id).single(),
+    supabase.from('clients').select('id,name').eq('status', 'active').order('name'),
+  ])
   const profile = rawProfile as { role: string } | null
-  const { data: rawClients } = await supabase.from('clients').select('id,name').eq('status', 'active').order('name')
   const clients = (rawClients ?? []) as { id: string; name: string }[]
 
   const platform = PLATFORMS.find(p => p.value === item.platform)

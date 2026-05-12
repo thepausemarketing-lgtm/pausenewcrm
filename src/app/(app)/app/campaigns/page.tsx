@@ -21,7 +21,7 @@ export default async function CampaignsPage({
 
   let query = supabase
     .from('campaigns')
-    .select('*, client:clients(name,slug)')
+    .select('id,name,status,type,start_date,end_date,budget,client:clients(name,slug)')
     .order('created_at', { ascending: false })
 
   if (params.status) query = query.eq('status', params.status as CampaignStatus)

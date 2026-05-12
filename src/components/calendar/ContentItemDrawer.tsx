@@ -147,13 +147,13 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
   }
 
   useEffect(() => {
-    createClient()
+    supabase
       .from('profiles')
       .select('id, full_name')
       .eq('is_active', true)
       .order('full_name')
       .then(({ data }) => setProfilesList(data ?? []))
-  }, [])
+  }, [supabase])
 
   const togglePlatform = (val: string) => {
     setPlatforms(prev => prev.includes(val) ? prev.filter(p => p !== val) : [...prev, val])

@@ -5,7 +5,7 @@ import { formatDate } from '@/lib/utils'
 export default async function ClientOverviewPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const supabase = await createClient()
-  const { data: client } = await supabase.from('clients').select('*').eq('slug', slug).single()
+  const { data: client } = await supabase.from('clients').select('id,notes,billing_type,industry,website,created_at').eq('slug', slug).single()
   if (!client) notFound()
 
   const [tasksRes, contentRes] = await Promise.all([

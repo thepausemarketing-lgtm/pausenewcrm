@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Phone, ExternalLink, Star, Megaphone, KeyRound, RefreshCw, Share2 } from 'lucide-react'
+import { Mail, Phone, ExternalLink, Star, KeyRound, RefreshCw, Share2 } from 'lucide-react'
 import { CAMPAIGN_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import StatusBadge from '@/components/shared/StatusBadge'
