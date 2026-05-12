@@ -4,8 +4,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, Users, CalendarDays, CheckSquare,
-  Megaphone, BarChart3, Settings, LogOut, UserCog, RefreshCw,
-  Bell, Search, Menu, X,
+  BarChart3, Settings, LogOut, UserCog, RefreshCw,
+  Bell, Menu, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -16,14 +16,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { NotificationDrawer } from './NotificationDrawer'
 
 const NAV_ITEMS = [
-  { href: '/app/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/app/clients',    icon: Users,            label: 'Clients' },
-  { href: '/app/calendar',   icon: CalendarDays,     label: 'Calendar' },
-  { href: '/app/tasks',      icon: CheckSquare,      label: 'Tasks' },
-  { href: '/app/campaigns',  icon: Megaphone,        label: 'Campaigns' },
-  { href: '/app/renewals',   icon: RefreshCw,        label: 'Renewals' },
-  { href: '/app/reports',    icon: BarChart3,        label: 'Reports' },
-  { href: '/app/settings/team', icon: UserCog,       label: 'Team' },
+  { href: '/app/dashboard',     icon: LayoutDashboard, label: 'Dashboard' },
+  { href: '/app/clients',       icon: Users,           label: 'Clients' },
+  { href: '/app/calendar',      icon: CalendarDays,    label: 'Calendar' },
+  { href: '/app/tasks',         icon: CheckSquare,     label: 'Tasks' },
+  { href: '/app/renewals',      icon: RefreshCw,       label: 'Renewals' },
+  { href: '/app/reports',       icon: BarChart3,       label: 'Reports' },
+  { href: '/app/settings/team', icon: UserCog,         label: 'Team' },
 ]
 
 export default function TopNav() {
@@ -78,7 +77,7 @@ export default function TopNav() {
           <span className="text-sm font-semibold text-gray-900 hidden sm:block">Pause Marketing<span className="text-gray-400 font-normal">.</span></span>
         </Link>
 
-        {/* Desktop Nav */}
+        {/* Desktop Nav — icon only, tooltip on hover */}
         <nav className="hidden md:flex items-center gap-0.5 flex-1">
           {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
             const active = isActive(href)
@@ -87,14 +86,17 @@ export default function TopNav() {
                 key={href}
                 href={href}
                 className={cn(
-                  'flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-all',
+                  'relative group w-9 h-9 rounded-xl flex items-center justify-center transition-all',
                   active
-                    ? 'bg-gray-900 text-white font-medium'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-gray-900 text-white'
+                    : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'
                 )}
               >
-                <Icon size={15} />
-                <span>{label}</span>
+                <Icon size={16} />
+                {/* Tooltip */}
+                <span className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-2 px-2.5 py-1 rounded-lg bg-gray-900 text-white text-xs font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg">
+                  {label}
+                </span>
               </Link>
             )
           })}
