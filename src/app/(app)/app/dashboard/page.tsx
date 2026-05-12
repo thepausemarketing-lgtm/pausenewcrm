@@ -207,25 +207,32 @@ export default async function DashboardPage() {
     { label: 'Overdue items',     value: stats.overdueTasks ?? 0,    href: '/app/tasks?date=overdue',    warn: (stats.overdueTasks ?? 0) > 0 },
   ]
 
+  // Pastel palettes — cycling per index, no purple
+  const ITEM_PASTELS = ['bg-emerald-100','bg-sky-100','bg-pink-100','bg-amber-100','bg-teal-100','bg-rose-100','bg-orange-100']
+  const CLIENT_PASTELS = ['bg-emerald-100','bg-teal-100','bg-sky-100','bg-pink-100','bg-orange-100','bg-amber-100','bg-cyan-100','bg-rose-100']
+  const TEAM_PASTELS   = ['bg-emerald-50','bg-sky-50','bg-pink-50','bg-amber-50','bg-teal-50','bg-rose-50']
+
+  // Card style — white, razor-thin border, no heavy shadow
+  const card = 'bg-white rounded-2xl border border-gray-100 p-6'
+
   return (
-    <div className="p-6">
-      {/* Greeting — no box, sits directly on gradient */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 px-2 mb-8">
+    <div className="p-6 bg-white min-h-full">
+
+      {/* Greeting */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 px-1 mb-8">
         <div>
-          <h1 className="text-[1.75rem] font-bold text-slate-900 tracking-tight leading-tight">
+          <h1 className="text-[1.75rem] font-bold text-gray-900 tracking-tight leading-tight">
             {greeting}, {firstName}! 👋
           </h1>
-          <p className="text-sm text-slate-500 mt-1.5">{todayLabel}</p>
+          <p className="text-sm text-gray-400 mt-1.5">{todayLabel}</p>
         </div>
-
-        {/* Hero stats */}
         <div className="flex gap-10 sm:gap-14">
           {heroStats.map(({ label, value, href, warn }) => (
             <Link key={label} href={href} className="text-center group">
-              <p className={`text-4xl font-bold tabular-nums leading-none tracking-tight transition-opacity group-hover:opacity-60 ${warn ? 'text-red-500' : 'text-slate-900'}`}>
+              <p className={`text-4xl font-bold tabular-nums leading-none tracking-tight group-hover:opacity-60 transition-opacity ${warn ? 'text-red-500' : 'text-gray-900'}`}>
                 {value}
               </p>
-              <p className="text-[11px] text-slate-500 mt-2 whitespace-nowrap font-medium uppercase tracking-wide">
+              <p className="text-[10px] text-gray-400 mt-2 whitespace-nowrap font-semibold uppercase tracking-widest">
                 {label}
               </p>
             </Link>
@@ -233,31 +240,34 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* 3-col cards row — My Tasks (wide) + Upcoming Content + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 mb-5">
+      {/* Main row — Tasks + Content + Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
 
-        {/* My Tasks — wider (2 cols) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+        {/* My Tasks */}
+        <div className={`lg:col-span-2 ${card}`}>
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">My Tasks</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Things waiting for you</p>
+              <h3 className="font-semibold text-gray-900">My Tasks</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Things waiting for you</p>
             </div>
-            <Link href="/app/tasks" className="text-xs text-slate-400 hover:text-gray-700 transition-colors">View all →</Link>
+            <Link href="/app/tasks"
+              className="text-xs font-medium bg-gray-900 text-white px-3 py-1.5 rounded-full hover:bg-gray-700 transition-colors">
+              View all
+            </Link>
           </div>
           {myTasks.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-10">No pending tasks 🎉</p>
+            <p className="text-sm text-gray-400 text-center py-10">No pending tasks 🎉</p>
           ) : (
-            <div className="bg-slate-50 rounded-xl overflow-hidden">
+            <div className="space-y-2">
               {myTasks.map((task, i) => {
                 const priority = TASK_PRIORITIES.find(p => p.value === task.priority)
                 return (
                   <Link key={task.id} href={`/app/tasks/${task.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-100 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
+                    className={`flex items-center gap-3 ${ITEM_PASTELS[i % ITEM_PASTELS.length]} rounded-xl px-4 py-3 group hover:brightness-95 transition-all`}>
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: priority?.color }} />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{task.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
+                      <p className="text-sm font-semibold text-gray-800 truncate">{task.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{dueDateLabel(task.due_date)}{task.client ? ` · ${task.client.name}` : ''}</p>
                     </div>
                   </Link>
                 )
@@ -267,26 +277,29 @@ export default async function DashboardPage() {
         </div>
 
         {/* Upcoming Content */}
-        <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+        <div className={`lg:col-span-2 ${card}`}>
+          <div className="flex items-center justify-between mb-5">
             <div>
-              <h3 className="text-sm font-semibold text-slate-800">Upcoming Content</h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">Scheduled for publishing</p>
+              <h3 className="font-semibold text-gray-900">Upcoming Content</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Scheduled for publishing</p>
             </div>
-            <Link href="/app/calendar" className="text-xs text-slate-400 hover:text-gray-700 transition-colors">View all →</Link>
+            <Link href="/app/calendar"
+              className="text-xs font-medium bg-gray-900 text-white px-3 py-1.5 rounded-full hover:bg-gray-700 transition-colors">
+              View all
+            </Link>
           </div>
           {upcomingContent.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-10">No scheduled content</p>
+            <p className="text-sm text-gray-400 text-center py-10">No scheduled content</p>
           ) : (
-            <div className="bg-slate-50 rounded-xl overflow-hidden">
+            <div className="space-y-2">
               {upcomingContent.map((item, i) => {
                 const status = CONTENT_STATUSES.find(s => s.value === item.status)
                 return (
                   <Link key={item.id} href={`/app/calendar/${item.id}`}
-                    className={`flex items-center gap-3 px-4 py-3 hover:bg-gray-100 group transition-colors ${i !== 0 ? 'border-t border-white' : ''}`}>
+                    className={`flex items-center gap-3 ${ITEM_PASTELS[(i + 2) % ITEM_PASTELS.length]} rounded-xl px-4 py-3 group hover:brightness-95 transition-all`}>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-slate-800 group-hover:text-slate-900 truncate font-medium">{item.title}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{item.title}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
                         {item.publish_at ? formatDate(item.publish_at, 'dd/MM') : '—'}
                         {item.client ? ` · ${item.client.name}` : ''}
                       </p>
@@ -299,23 +312,23 @@ export default async function DashboardPage() {
           )}
         </div>
 
-        {/* Recent Activity — narrow (1 col) */}
-        <div className="lg:col-span-1 bg-white rounded-2xl shadow-sm p-6">
-          <div className="mb-4">
-            <h3 className="text-sm font-semibold text-slate-800">Activity</h3>
-            <p className="text-[11px] text-slate-400 mt-0.5">Latest updates</p>
+        {/* Activity */}
+        <div className={`lg:col-span-1 ${card}`}>
+          <div className="mb-5">
+            <h3 className="font-semibold text-gray-900">Activity</h3>
+            <p className="text-xs text-gray-400 mt-0.5">Latest updates</p>
           </div>
           {recentActivity.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-10">No activity yet</p>
+            <p className="text-sm text-gray-400 text-center py-10">No activity yet</p>
           ) : (
-            <div className="bg-slate-50 rounded-xl overflow-hidden">
+            <div className="space-y-2">
               {recentActivity.slice(0, 6).map((log, i) => (
-                <div key={log.id} className={`px-3 py-2.5 ${i !== 0 ? 'border-t border-white' : ''}`}>
-                  <p className="text-xs text-slate-700 leading-snug">
+                <div key={log.id} className={`${ITEM_PASTELS[(i + 4) % ITEM_PASTELS.length]} rounded-xl px-3 py-2.5`}>
+                  <p className="text-xs text-gray-700 leading-snug">
                     <span className="font-semibold">{log.actor?.full_name?.split(' ')[0] ?? 'Someone'}</span>
                     {' '}{log.action.replace(/_/g, ' ')}
                   </p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">
+                  <p className="text-[10px] text-gray-400 mt-0.5">
                     {new Date(log.created_at).toLocaleString('en-GB', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -326,65 +339,55 @@ export default async function DashboardPage() {
       </div>
 
       {/* Content Pipeline */}
-      <div className="mb-5">
-        <div className="bg-white rounded-2xl shadow-sm p-6">
-          <h3 className="text-sm font-semibold text-slate-800 mb-5">Content Pipeline</h3>
-          <div className="grid grid-cols-5 gap-3">
-            {pipelineItems.map(({ key, label, numColor, bg, dotColor }) => {
-              const count = pipelineCounts[key]
-              return (
-                <Link
-                  key={key}
-                  href={`/app/calendar?status=${key}`}
-                  className={`rounded-xl p-4 text-center hover:shadow-sm transition-all cursor-pointer ${bg} group`}
-                >
-                  <div className="flex items-center justify-center gap-1.5 mb-2">
-                    <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                    <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">{label}</p>
-                  </div>
-                  <p className={`text-3xl font-bold ${numColor}`}>{count}</p>
-                </Link>
-              )
-            })}
-          </div>
+      <div className={`${card} mb-4`}>
+        <h3 className="font-semibold text-gray-900 mb-5">Content Pipeline</h3>
+        <div className="grid grid-cols-5 gap-3">
+          {pipelineItems.map(({ key, label, numColor, bg, dotColor }) => {
+            const count = pipelineCounts[key]
+            return (
+              <Link key={key} href={`/app/calendar?status=${key}`}
+                className={`${bg} rounded-xl p-4 text-center hover:brightness-95 transition-all`}>
+                <div className="flex items-center justify-center gap-1.5 mb-2">
+                  <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                  <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{label}</p>
+                </div>
+                <p className={`text-3xl font-bold ${numColor}`}>{count}</p>
+              </Link>
+            )
+          })}
         </div>
       </div>
 
       {/* Team Overview */}
       {teamByPerson.length > 0 && (
-        <div className="mb-5">
+        <div className="mb-4">
           <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-sm font-semibold text-slate-800">Team Overview</h2>
-            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full font-medium">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
+            <h2 className="font-semibold text-gray-900">Team Overview</h2>
+            <span className="text-xs bg-gray-100 text-gray-500 px-2.5 py-0.5 rounded-full font-medium">{teamByPerson.length} member{teamByPerson.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }) => (
-              <div key={profile.id} className="bg-white rounded-2xl shadow-sm p-6">
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-bold text-gray-700 shrink-0 overflow-hidden">
+            {teamByPerson.map(({ profile, tasksToday, overdueTasks, contentToday, overdueContent }, pi) => (
+              <div key={profile.id} className={`${card}`}>
+                <div className={`flex items-center gap-3 mb-5 ${TEAM_PASTELS[pi % TEAM_PASTELS.length]} -mx-6 -mt-6 px-6 pt-5 pb-4 rounded-t-2xl`}>
+                  <div className="w-9 h-9 rounded-full bg-white/70 flex items-center justify-center text-sm font-bold text-gray-700 shrink-0 overflow-hidden border border-white">
                     {profile.avatar_url
                       ? <img src={profile.avatar_url} alt={profile.full_name} className="w-full h-full object-cover" />
                       : profile.full_name?.charAt(0).toUpperCase()}
                   </div>
-                  <p className="text-sm font-semibold text-slate-900">{profile.full_name}</p>
+                  <p className="font-semibold text-gray-900">{profile.full_name}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-50 rounded-xl p-3">
-                    <p className="text-[10px] text-gray-400 mb-1.5 font-semibold uppercase tracking-wider">Content</p>
-                    <p className="text-2xl font-bold text-gray-800">{contentToday}</p>
-                  </div>
-                  <div className="bg-amber-50 rounded-xl p-3">
-                    <p className="text-[10px] text-amber-400 mb-1.5 font-semibold uppercase tracking-wider">Tasks</p>
-                    <p className="text-2xl font-bold text-amber-700">{tasksToday}</p>
-                  </div>
-                  <div className={`rounded-xl p-3 ${overdueContent > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
-                    <p className={`text-[10px] mb-1.5 font-semibold uppercase tracking-wider ${overdueContent > 0 ? 'text-red-400' : 'text-slate-400'}`}>Late Content</p>
-                    <p className={`text-2xl font-bold ${overdueContent > 0 ? 'text-red-600' : 'text-slate-400'}`}>{overdueContent}</p>
-                  </div>
-                  <div className={`rounded-xl p-3 ${overdueTasks > 0 ? 'bg-red-50' : 'bg-slate-50'}`}>
-                    <p className={`text-[10px] mb-1.5 font-semibold uppercase tracking-wider ${overdueTasks > 0 ? 'text-red-400' : 'text-slate-400'}`}>Late Tasks</p>
-                    <p className={`text-2xl font-bold ${overdueTasks > 0 ? 'text-red-600' : 'text-slate-400'}`}>{overdueTasks}</p>
-                  </div>
+                  {[
+                    { label: 'Content', value: contentToday, warn: false },
+                    { label: 'Tasks',   value: tasksToday,   warn: false },
+                    { label: 'Late Content', value: overdueContent, warn: overdueContent > 0 },
+                    { label: 'Late Tasks',   value: overdueTasks,   warn: overdueTasks > 0 },
+                  ].map(({ label, value, warn }) => (
+                    <div key={label} className={`rounded-xl p-3 ${warn ? 'bg-red-50' : 'bg-gray-50'}`}>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mb-1.5 ${warn ? 'text-red-400' : 'text-gray-400'}`}>{label}</p>
+                      <p className={`text-2xl font-bold ${warn ? 'text-red-600' : 'text-gray-800'}`}>{value}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -392,23 +395,23 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* Client Health Grid */}
+      {/* Client Health */}
       {clients.length > 0 && (
-        <div className="bg-white rounded-2xl shadow-sm p-6 mb-5">
-          <h3 className="text-sm font-semibold text-slate-800 mb-5">Client Health</h3>
+        <div className={`${card} mb-4`}>
+          <h3 className="font-semibold text-gray-900 mb-5">Client Health</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {clients.map((client) => {
+            {clients.map((client, i) => {
               const statusDef = CLIENT_STATUSES.find(s => s.value === client.status)
               return (
                 <Link key={client.id} href={`/app/clients/${client.slug}`}
-                  className="bg-slate-50 hover:bg-gray-100 rounded-xl p-4 transition-colors group">
-                  <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-violet-700">{client.name}</p>
+                  className={`${CLIENT_PASTELS[i % CLIENT_PASTELS.length]} rounded-2xl p-4 hover:brightness-95 transition-all group`}>
+                  <p className="font-semibold text-gray-900 truncate">{client.name}</p>
                   <div className="flex items-center justify-between mt-3">
                     {statusDef && <StatusBadge label={statusDef.label} color={statusDef.color} />}
                     {client.health_score && (
                       <div className="flex gap-0.5">
-                        {[1, 2, 3, 4, 5].map(i => (
-                          <div key={i} className={`w-1.5 h-3 rounded-sm ${i <= client.health_score! ? 'bg-lime-400' : 'bg-slate-200'}`} />
+                        {[1, 2, 3, 4, 5].map(j => (
+                          <div key={j} className={`w-1.5 h-3 rounded-sm ${j <= client.health_score! ? 'bg-gray-700' : 'bg-white/60'}`} />
                         ))}
                       </div>
                     )}
