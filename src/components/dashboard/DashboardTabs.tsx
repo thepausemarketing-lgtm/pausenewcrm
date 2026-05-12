@@ -102,25 +102,28 @@ export default function DashboardTabs({
         <p className="text-sm text-gray-400 mt-1.5">{todayLabel}</p>
       </div>
 
-      {/* ── Tab bar — floats above, active tab merges into card below ───────── */}
-      <div className="flex justify-center gap-0.5 relative z-10">
-        {TABS.map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex items-center gap-2 px-5 py-2.5 text-sm font-medium transition-all relative ${
-              activeTab === id
-                ? 'bg-white/55 backdrop-blur-xl border-t border-l border-r border-white/70 rounded-t-xl -mb-px text-gray-900 shadow-[0_-2px_12px_rgba(0,0,0,0.03)]'
-                : 'text-gray-400 hover:text-gray-700 rounded-t-xl hover:bg-white/30'
-            }`}
-          >
-            <Icon size={14} />
-            {label}
-          </button>
-        ))}
+      {/* ── Tab bar — shared bg strip, active tab is taller and merges into card */}
+      <div className="flex justify-center relative z-10">
+        {/* strip container — wraps only the tabs, no bottom border */}
+        <div className="flex items-end gap-1 bg-white/30 backdrop-blur-sm border border-white/50 border-b-0 rounded-t-2xl px-3 pt-2">
+          {TABS.map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex items-center gap-2 text-sm font-medium transition-all ${
+                activeTab === id
+                  ? 'px-5 py-3.5 bg-white/60 backdrop-blur border-t border-l border-r border-white/70 rounded-t-xl -mb-px text-gray-900 shadow-sm'
+                  : 'px-4 py-2 mb-1 bg-white/20 rounded-lg text-gray-500 hover:bg-white/40 hover:text-gray-700'
+              }`}
+            >
+              <Icon size={14} />
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* ── Card — connects seamlessly with active tab above ─────────────────── */}
+      {/* ── Card — active tab merges into its top edge ────────────────────────── */}
       <div className={`${card} p-0 overflow-hidden relative z-0`}>
 
         {/* Tab panels */}
