@@ -108,10 +108,29 @@ export default async function DashboardPage() {
     teamProfilesPromise,
   ])
 
-  const activity = (activityRes.data ?? []).map((l: any) => ({
+  // ── Resolve entity names from activity logs ───────────────────────────────────
+  const rawLogs = activityRes.data ?? []
+
+  const taskIds     = [...new Set(rawLogs.filter((l: any) => l.entity_type === 'task').map((l: any) => l.entity_id).filter(Boolean))]
+  const contentIds  = [...new Set(rawLogs.filter((l: any) => l.entity_type === 'content_item').map((l: any) => l.entity_id).filter(Boolean))]
+  const clientIds   = [...new Set(rawLogs.filter((l: any) => l.entity_type === 'client').map((l: any) => l.entity_id).filter(Boolean))]
+
+  const [taskNamesRes, contentNamesRes, clientNamesRes] = await Promise.all([
+    taskIds.length    > 0 ? supabase.from('tasks').select('id, title').in('id', taskIds)         : Promise.resolve({ data: [] }),
+    contentIds.length > 0 ? supabase.from('content_items').select('id, title').in('id', contentIds) : Promise.resolve({ data: [] }),
+    clientIds.length  > 0 ? supabase.from('clients').select('id, name').in('id', clientIds)      : Promise.resolve({ data: [] }),
+  ])
+
+  const entityNameMap: Record<string, string> = {}
+  for (const t of (taskNamesRes.data ?? []) as any[])   entityNameMap[t.id] = t.title
+  for (const c of (contentNamesRes.data ?? []) as any[]) entityNameMap[c.id] = c.title
+  for (const c of (clientNamesRes.data ?? []) as any[])  entityNameMap[c.id] = c.name
+
+  const activity = rawLogs.map((l: any) => ({
     id: l.id, actorName: l.actor?.full_name ?? 'Someone',
     action: l.action, entityType: l.entity_type ?? null,
     entityId: l.entity_id ?? null, createdAt: l.created_at,
+    entityName: l.entity_id ? (entityNameMap[l.entity_id] ?? null) : null,
   }))
 
   // ── Team stats — if there are team members, fetch their tasks + content ───────

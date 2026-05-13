@@ -11,7 +11,7 @@ interface TaskItem  { id: string; title: string; priority: string; status: strin
 interface ContentItem { id: string; title: string; status: string; publish_at: string | null; client: { name: string; slug: string } | null }
 interface PipelineItem { key: string; label: string; numColor: string; bg: string; dotColor: string; count: number }
 interface TeamMember { id: string; full_name: string; avatar_url: string | null; contentToday: number; tasksToday: number; overdueContent: number; overdueTasks: number }
-interface ActivityItem { id: string; actorName: string; action: string; entityType: string | null; entityId: string | null; createdAt: string }
+interface ActivityItem { id: string; actorName: string; action: string; entityType: string | null; entityId: string | null; entityName: string | null; createdAt: string }
 interface TaskPriority { value: string; label: string; color: string }
 interface ContentStatus { value: string; label: string; color: string }
 
@@ -420,6 +420,9 @@ export default function DashboardTabs({
                                 <p className="text-sm text-gray-700 leading-snug">
                                   <span className="font-semibold text-gray-900">{log.actorName}</span>
                                   {' '}<span>{verb}</span>
+                                  {log.entityName && (
+                                    <span className="font-semibold text-gray-900"> "{log.entityName}"</span>
+                                  )}
                                   {entityLabel && (
                                     <span className="ml-1.5 text-[10px] font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md uppercase tracking-wide">{entityLabel}</span>
                                   )}
