@@ -27,31 +27,27 @@ type ItemWithRelations = ContentItem & {
 
 const APPROVABLE_STATUSES = ['approved', 'scheduled', 'published']
 
-// Shows dd/mm/yyyy but uses native date picker underneath
+// Reliable native date picker — no opacity overlay trick
 function DateInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
-  const display = value ? `${value.slice(8,10)}/${value.slice(5,7)}/${value.slice(0,4)}` : ''
   return (
-    <div className="relative">
-      <input type="text" value={display} readOnly placeholder="dd/mm/yyyy"
-        className={className ?? 'w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none'} />
-      <input type="date" value={value} onChange={e => onChange(e.target.value)}
-        className="absolute inset-0 opacity-0 cursor-pointer w-full" />
-    </div>
+    <input
+      type="date"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={className ?? 'w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer'}
+    />
   )
 }
 
-// Shows dd/mm/yyyy HH:mm but uses native datetime-local picker
+// Reliable native datetime-local picker
 function DateTimeInput({ value, onChange, className }: { value: string; onChange: (v: string) => void; className?: string }) {
-  const displayDate = value ? `${value.slice(8,10)}/${value.slice(5,7)}/${value.slice(0,4)}` : ''
-  const displayTime = value ? value.slice(11,16) : ''
-  const display = value ? `${displayDate} ${displayTime}` : ''
   return (
-    <div className="relative">
-      <input type="text" value={display} readOnly placeholder="dd/mm/yyyy HH:mm"
-        className={className ?? 'w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none'} />
-      <input type="datetime-local" value={value} onChange={e => onChange(e.target.value)}
-        className="absolute inset-0 opacity-0 cursor-pointer w-full" />
-    </div>
+    <input
+      type="datetime-local"
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      className={className ?? 'w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer'}
+    />
   )
 }
 

@@ -286,16 +286,12 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
             </div>
             <div>
               <p className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-1.5">Due Date</p>
-              <div className="relative">
-                <input type="text" readOnly
-                  value={task.due_date ? `${task.due_date.slice(8,10)}/${task.due_date.slice(5,7)}/${task.due_date.slice(0,4)}` : 'Not set'}
-                  className="w-full h-8 px-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none cursor-pointer"
-                />
-                <input type="date" value={task.due_date ?? ''}
-                  onChange={e => saveField('due_date', e.target.value || null)}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                />
-              </div>
+              <input
+                type="date"
+                value={task.due_date ?? ''}
+                onChange={e => saveField('due_date', e.target.value || null)}
+                className="w-full h-8 px-2 text-sm border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400 cursor-pointer"
+              />
             </div>
           </div>
 
