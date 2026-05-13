@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ListTodo, BarChart2, Users, Activity, TrendingUp, AlertTriangle, Clock, CheckCircle2, FileText, Send } from 'lucide-react'
+import { ListTodo, BarChart2, Users, Activity, TrendingUp, AlertTriangle, Clock, CheckCircle2, FileText, CheckCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -27,13 +27,37 @@ const TABS = [
   { id: 'activity', label: 'Activity',         icon: Activity  },
 ]
 
+// ── Overall status derivation (mirrors InlineContentRow logic) ────────────────
+function deriveOverallStatus(item: {
+  design_status:   string | null
+  internal_review: string | null
+  client_approval: string | null
+  live_links:      Record<string, string> | null
+}): string {
+  const ds = item.design_status   ?? 'not_started'
+  const ir = item.internal_review ?? 'pending'
+  const ca = item.client_approval ?? 'pending'
+  const hasLive = Object.values(item.live_links ?? {}).some(v => !!v)
+  if (hasLive)                               return 'Posted'
+  if (ir === 'approved' && ca === 'approved') return 'Ready to Post'
+  if (ca === 'changes_required')             return 'Client Revisions'
+  if (ir === 'changes_required')             return 'Internal Revisions'
+  if (ir === 'approved' && ca === 'pending') return 'Awaiting Client'
+  if (ds === 'done'     && ir === 'pending') return 'Awaiting Review'
+  if (ds === 'in_progress')                  return 'In Design'
+  return 'Not Started'
+}
+
 // ── Pipeline stage config ─────────────────────────────────────────────────────
 const STAGES = [
-  { key: 'draft',     label: 'Draft',     numColor: 'text-gray-700',   dotColor: 'bg-gray-300'   },
-  { key: 'in_review', label: 'In Review', numColor: 'text-amber-700',  dotColor: 'bg-amber-400'  },
-  { key: 'approved',  label: 'Approved',  numColor: 'text-blue-700',   dotColor: 'bg-blue-500'   },
-  { key: 'scheduled', label: 'Scheduled', numColor: 'text-indigo-700', dotColor: 'bg-indigo-400' },
-  { key: 'published', label: 'Published', numColor: 'text-green-700',  dotColor: 'bg-green-500'  },
+  { key: 'Not Started',        label: 'Not Started',        numColor: 'text-gray-600',   dotColor: 'bg-gray-400'   },
+  { key: 'In Design',          label: 'In Design',          numColor: 'text-cyan-700',   dotColor: 'bg-cyan-500'   },
+  { key: 'Awaiting Review',    label: 'Awaiting Review',    numColor: 'text-violet-700', dotColor: 'bg-violet-500' },
+  { key: 'Awaiting Client',    label: 'Awaiting Client',    numColor: 'text-purple-700', dotColor: 'bg-purple-500' },
+  { key: 'Client Revisions',   label: 'Client Revisions',   numColor: 'text-amber-700',  dotColor: 'bg-amber-500'  },
+  { key: 'Internal Revisions', label: 'Internal Revisions', numColor: 'text-orange-700', dotColor: 'bg-orange-500' },
+  { key: 'Ready to Post',      label: 'Ready to Post',      numColor: 'text-blue-700',   dotColor: 'bg-blue-500'   },
+  { key: 'Posted',             label: 'Posted',             numColor: 'text-green-700',  dotColor: 'bg-green-500'  },
 ] as const
 
 // ── PipelinePanel ─────────────────────────────────────────────────────────────
@@ -50,11 +74,11 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
   const supabase = createClient()
 
   useEffect(() => {
-    const fetch = async () => {
+    const load = async () => {
       setLoading(true)
       let q = (supabase as any)
         .from('content_items')
-        .select('status')
+        .select('design_status, internal_review, client_approval, live_links')
         .not('status', 'eq', 'cancelled')
         .gte('publish_at', dateFrom)
         .lte('publish_at', dateTo + 'T23:59:59')
@@ -64,18 +88,19 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
       const { data } = await q
       const c: Record<string, number> = {}
       for (const row of (data ?? [])) {
-        c[row.status] = (c[row.status] ?? 0) + 1
+        const key = deriveOverallStatus(row)
+        c[key] = (c[key] ?? 0) + 1
       }
       setCounts(c)
       setLoading(false)
     }
-    fetch()
+    load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo, clientId])
 
-  const total     = Object.values(counts).reduce((s, n) => s + n, 0)
-  const draft     = counts['draft']     ?? 0
-  const published = counts['published'] ?? 0
+  const total    = Object.values(counts).reduce((s, n) => s + n, 0)
+  const notStarted = counts['Not Started'] ?? 0
+  const posted     = counts['Posted']      ?? 0
 
   const sel = 'h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400'
 
@@ -108,9 +133,9 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
       {/* ── 3 hero stats ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Content', value: total,     icon: FileText,     color: 'bg-gray-50 text-gray-500'   },
-          { label: 'In Draft',      value: draft,     icon: Clock,        color: 'bg-amber-50 text-amber-500' },
-          { label: 'Published',     value: published, icon: Send,         color: 'bg-green-50 text-green-600' },
+          { label: 'Total Content', value: total,      icon: FileText,    color: 'bg-gray-50 text-gray-500'    },
+          { label: 'Not Started',   value: notStarted, icon: Clock,       color: 'bg-amber-50 text-amber-500'  },
+          { label: 'Posted',        value: posted,     icon: CheckCheck,  color: 'bg-green-50 text-green-600'  },
         ].map(({ label, value, icon: Icon, color }) => (
           <div key={label} className="bg-white/60 rounded-xl border border-white/70 p-4 sm:p-5">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color} mb-3`}>
@@ -125,26 +150,25 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
       </div>
 
       {/* ── Stage breakdown cards ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {STAGES.map(({ key, label, numColor, dotColor }) => {
           const count = counts[key] ?? 0
           const pct   = total ? Math.round((count / total) * 100) : 0
           return (
-            <Link key={key} href={`/app/calendar?status=${key}`}
-              className="bg-white/60 rounded-xl border border-white/70 p-4 hover:bg-white/80 transition-all group">
-              <div className="flex items-center gap-1.5 mb-3">
-                <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
+            <div key={key} className="bg-white/60 rounded-xl border border-white/70 p-3 sm:p-4">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 leading-tight">{label}</p>
               </div>
-              <p className={`text-4xl font-bold ${numColor} leading-none mb-1 ${loading ? 'opacity-30' : ''}`}>{count}</p>
+              <p className={`text-3xl sm:text-4xl font-bold ${numColor} leading-none mb-1 ${loading ? 'opacity-30' : ''}`}>{count}</p>
               <div className="flex items-center justify-between mt-1">
-                <p className="text-xs text-gray-400">items</p>
-                <p className={`text-xs font-bold ${numColor}`}>{pct}%</p>
+                <p className="text-[10px] text-gray-400">items</p>
+                <p className={`text-[10px] font-bold ${numColor}`}>{pct}%</p>
               </div>
-              <div className="mt-2.5 h-1 bg-gray-100 rounded-full overflow-hidden">
+              <div className="mt-2 h-1 bg-gray-100 rounded-full overflow-hidden">
                 <div className={`h-full ${dotColor} rounded-full`} style={{ width: `${pct}%` }} />
               </div>
-            </Link>
+            </div>
           )
         })}
       </div>
