@@ -12,7 +12,7 @@ type ContentAssigneeRef = {
 }
 
 type ItemWithRelations = ContentItem & {
-  client?: { name: string; slug: string; id: string } | null
+  client?: { name: string; slug: string; id: string; logo_url?: string | null } | null
   assignee?: { full_name: string } | null
   content_assignees?: ContentAssigneeRef[]
 }
@@ -150,7 +150,18 @@ export default function InlineContentRow({ item, profiles, visibleCols, canAppro
       {/* Client */}
       {visibleCols.has('client') && (
         <td className="px-4 py-2.5 text-xs text-gray-500">
-          {item.client?.name ?? <span className="text-gray-300">—</span>}
+          {item.client
+            ? (
+              <span className="inline-flex items-center gap-1.5">
+                {item.client.logo_url
+                  ? <img src={item.client.logo_url} alt="" className="w-4 h-4 rounded object-contain flex-shrink-0" />
+                  : null
+                }
+                {item.client.name}
+              </span>
+            )
+            : <span className="text-gray-300">—</span>
+          }
         </td>
       )}
 

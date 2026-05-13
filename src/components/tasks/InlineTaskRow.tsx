@@ -205,7 +205,11 @@ export default function InlineTaskRow({ task, profiles, selected, onSelect, onOp
         {task.client ? (
           <Link href={`/app/clients/${task.client.slug}`}
             onClick={e => e.stopPropagation()}
-            className="text-xs text-gray-500 hover:text-gray-800 hover:underline">
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 hover:underline">
+            {task.client.logo_url
+              ? <img src={task.client.logo_url} alt="" className="w-4 h-4 rounded object-contain flex-shrink-0" />
+              : null
+            }
             {task.client.name}
           </Link>
         ) : <span className="text-gray-300 text-xs">—</span>}

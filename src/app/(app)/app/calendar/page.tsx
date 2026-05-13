@@ -49,7 +49,7 @@ export default async function CalendarPage({
   // ── Month items (for Calendar + List views) ──
   let monthQuery = (supabase as any)
     .from('content_items')
-    .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
+    .select('*, client:clients(name,slug,id,logo_url), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
     .gte('publish_at', startOfMonth)
     .lte('publish_at', endOfMonth)
     .order('publish_at', { ascending: true })
@@ -63,7 +63,7 @@ export default async function CalendarPage({
   // ── Board items (all non-cancelled, no date filter) ──
   let boardQuery = (supabase as any)
     .from('content_items')
-    .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name,avatar_url)')
+    .select('*, client:clients(name,slug,id,logo_url), assignee:profiles!content_items_assigned_to_fkey(full_name,avatar_url)')
     .not('status', 'eq', 'cancelled')
     .order('created_at', { ascending: false })
 

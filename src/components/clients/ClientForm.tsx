@@ -11,8 +11,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { Building2, Camera, Loader2 } from 'lucide-react'
+import Image from 'next/image'
 import type { Client } from '@/types/database.types'
 
 const CURRENCIES = [
@@ -48,7 +50,40 @@ interface Props {
 export default function ClientForm({ client, allClients = [], onSuccess }: Props) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(client?.logo_url ?? null)
+  const [logoUploading, setLogoUploading] = useState(false)
+  const logoInputRef = useRef<HTMLInputElement>(null)
   const supabase = createClient()
+
+  const handleLogoUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return }
+    setLogoUploading(true)
+    setError(null)
+    try {
+      const ext = file.name.split('.').pop()
+      // Use client id if editing, otherwise a temp timestamp key (will be re-uploaded on save if needed, but fine for new clients)
+      const key = client?.id ?? `new-${Date.now()}`
+      const path = `${key}/logo.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('client-logos')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage.from('client-logos').getPublicUrl(path)
+      const urlWithBust = `${publicUrl}?t=${Date.now()}`
+      setLogoUrl(urlWithBust)
+      // If editing existing client, save immediately
+      if (client) {
+        const { error: updateError } = await supabase.from('clients').update({ logo_url: urlWithBust }).eq('id', client.id)
+        if (updateError) throw updateError
+        toast.success('Logo updated')
+        router.refresh()
+      }
+    } catch (e: any) {
+      setError(e?.message ?? 'Upload failed')
+    } finally {
+      setLogoUploading(false)
+    }
+  }
 
   // Only show top-level clients as parent options (not sub-brands themselves)
   const parentOptions = allClients.filter(c => !c.parent_client_id && c.id !== client?.id)
@@ -86,6 +121,7 @@ export default function ClientForm({ client, allClients = [], onSuccess }: Props
       notes: data.notes || null,
       currency: data.currency || 'INR',
       parent_client_id: data.parent_client_id || null,
+      logo_url: logoUrl || null,
     }
 
     if (client) {
@@ -121,6 +157,46 @@ export default function ClientForm({ client, allClients = [], onSuccess }: Props
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+
+      {/* Logo upload */}
+      <div className="flex items-center gap-4">
+        <div
+          className="relative group w-16 h-16 rounded-xl border border-gray-200 bg-gray-50 flex items-center justify-center overflow-hidden cursor-pointer flex-shrink-0"
+          onClick={() => logoInputRef.current?.click()}
+          title="Upload client logo"
+        >
+          {logoUrl ? (
+            <Image src={logoUrl} alt="Logo" fill className="object-contain p-1" />
+          ) : (
+            <Building2 size={28} className="text-gray-300" />
+          )}
+          <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+            {logoUploading
+              ? <Loader2 size={18} className="text-white animate-spin" />
+              : <Camera size={18} className="text-white" />
+            }
+          </div>
+        </div>
+        <div>
+          <p className="text-sm font-medium text-gray-700">Client Logo</p>
+          <button
+            type="button"
+            onClick={() => logoInputRef.current?.click()}
+            className="text-xs text-violet-600 hover:text-violet-700 mt-0.5"
+          >
+            {logoUploading ? 'Uploading…' : logoUrl ? 'Change logo' : 'Upload logo'}
+          </button>
+          <p className="text-xs text-gray-400 mt-0.5">PNG, JPG, SVG — shown in task & content lists</p>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleLogoUpload(f) }}
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Name */}
         <div className="space-y-1.5 md:col-span-2">

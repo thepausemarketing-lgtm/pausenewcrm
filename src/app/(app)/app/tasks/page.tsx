@@ -9,7 +9,7 @@ export type AssigneeRef = {
   user: { id: string; full_name: string; avatar_url: string | null } | null
 }
 export type TaskWithAssignees = Task & {
-  client?: { name: string; slug: string } | null
+  client?: { name: string; slug: string; logo_url?: string | null } | null
   task_assignees?: AssigneeRef[]
 }
 
@@ -31,7 +31,7 @@ export default async function MyTasksPage() {
 
   let tasksQuery = (supabase as any)
     .from('tasks')
-    .select('*, client:clients(name,slug), task_assignees(user_id, assigned_at, user:profiles!task_assignees_user_id_fkey(id,full_name,avatar_url))')
+    .select('*, client:clients(name,slug,logo_url), task_assignees(user_id, assigned_at, user:profiles!task_assignees_user_id_fkey(id,full_name,avatar_url))')
     .not('status', 'in', '(done,cancelled)')
     .is('parent_task_id', null)
     .order('due_date', { ascending: true, nullsFirst: false })

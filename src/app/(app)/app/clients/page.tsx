@@ -16,7 +16,7 @@ export default async function ClientsPage({
   const params = await searchParams
   const supabase = await createClient()
 
-  let query = supabase.from('clients').select('id,name,slug,status,industry,monthly_value,currency,health_score,website,parent_client_id').order('name')
+  let query = supabase.from('clients').select('id,name,slug,status,industry,monthly_value,currency,health_score,website,parent_client_id,logo_url').order('name')
 
   if (params.status) query = query.eq('status', params.status as ClientStatus)
   if (params.search) query = query.ilike('name', `%${params.search}%`)
@@ -120,8 +120,15 @@ export default async function ClientsPage({
                   return (
                     <tr key={`${client.id}-${i}`} className="hover:bg-gray-50 transition-colors">
                       <td className="px-4 py-3">
-                        <div className={indent > 0 ? 'pl-5 flex items-center gap-1.5' : ''}>
+                        <div className={`flex items-center gap-2 ${indent > 0 ? 'pl-5' : ''}`}>
                           {indent > 0 && <ChevronRight size={12} className="text-gray-300 shrink-0" />}
+                          {/* Logo */}
+                          <div className="w-7 h-7 rounded-md border border-gray-100 bg-gray-50 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {(client as any).logo_url
+                              ? <img src={(client as any).logo_url} alt="" className="w-full h-full object-contain p-0.5" />
+                              : <span className="text-xs font-bold text-gray-300">{client.name.charAt(0)}</span>
+                            }
+                          </div>
                           <div>
                             <Link href={`/app/clients/${client.slug}`} className="font-medium text-gray-900 hover:text-violet-600">
                               {client.name}

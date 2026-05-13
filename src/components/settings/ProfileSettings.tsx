@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
 import type { Profile } from '@/types/database.types'
 import { useRouter } from 'next/navigation'
+import { Camera, Loader2 } from 'lucide-react'
 
 const TIMEZONES = [
   'Asia/Kolkata', 'Asia/Dubai', 'Europe/London', 'Europe/Paris',
@@ -20,11 +21,44 @@ export default function ProfileSettings({ profile, email }: { profile: Profile; 
   const [fullName, setFullName] = useState(profile.full_name)
   const [timezone, setTimezone] = useState(profile.timezone)
   const [telegramChatId, setTelegramChatId] = useState(profile.telegram_chat_id ?? '')
+  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url ?? null)
+  const [avatarUploading, setAvatarUploading] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
   const router = useRouter()
+  const avatarInputRef = useRef<HTMLInputElement>(null)
+
+  const handleAvatarUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) { setError('Please select an image file'); return }
+    setAvatarUploading(true)
+    setError(null)
+    try {
+      const ext = file.name.split('.').pop()
+      const path = `${profile.id}/avatar.${ext}`
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true })
+      if (uploadError) throw uploadError
+      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(path)
+      // Bust cache by appending timestamp
+      const urlWithBust = `${publicUrl}?t=${Date.now()}`
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: urlWithBust })
+        .eq('id', profile.id)
+      if (updateError) throw updateError
+      setAvatarUrl(urlWithBust)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2500)
+      router.refresh()
+    } catch (e: any) {
+      setError(e?.message ?? 'Upload failed')
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
 
   const handleSave = async () => {
     setError(null)
@@ -51,15 +85,43 @@ export default function ProfileSettings({ profile, email }: { profile: Profile; 
     <div className="space-y-6">
       {/* Avatar */}
       <div className="flex items-center gap-4">
-        <Avatar className="h-14 w-14">
-          <AvatarImage src={profile.avatar_url ?? undefined} />
-          <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
-            {getInitials(profile.full_name || email)}
-          </AvatarFallback>
-        </Avatar>
+        <div className="relative group">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={avatarUrl ?? undefined} />
+            <AvatarFallback className="text-lg bg-gray-200 text-gray-600">
+              {getInitials(profile.full_name || email)}
+            </AvatarFallback>
+          </Avatar>
+          {/* Upload overlay */}
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+            title="Upload photo"
+          >
+            {avatarUploading
+              ? <Loader2 size={18} className="text-white animate-spin" />
+              : <Camera size={18} className="text-white" />
+            }
+          </button>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={e => { const f = e.target.files?.[0]; if (f) handleAvatarUpload(f) }}
+          />
+        </div>
         <div>
           <p className="text-sm font-medium text-gray-900">{profile.full_name || email}</p>
           <p className="text-xs text-gray-400 capitalize">{profile.role}</p>
+          <button
+            type="button"
+            onClick={() => avatarInputRef.current?.click()}
+            className="text-xs text-violet-600 hover:text-violet-700 mt-0.5"
+          >
+            {avatarUploading ? 'Uploading…' : 'Change photo'}
+          </button>
         </div>
       </div>
 
