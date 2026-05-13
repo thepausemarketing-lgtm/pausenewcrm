@@ -147,8 +147,32 @@ export default function TaskDetailDrawer({ taskId, clients, profiles, onClose, o
 
   const sendComment = async () => {
     if (!newComment.trim() || !profile) return
-    await supabase.from('task_comments').insert({ task_id: taskId, author_id: profile.id, body: newComment.trim() })
+    const body = newComment.trim()
+    await supabase.from('task_comments').insert({ task_id: taskId, author_id: profile.id, body })
     setNewComment('')
+
+    // ── Notify all assignees (except the commenter) via Telegram ─────────────
+    const recipientIds = assignees
+      .map(a => a.user_id)
+      .filter(id => id !== profile.id)
+
+    // Also notify the task's primary assigned_to if they're not in task_assignees
+    if (task?.assigned_to && task.assigned_to !== profile.id && !recipientIds.includes(task.assigned_to)) {
+      recipientIds.push(task.assigned_to)
+    }
+
+    if (recipientIds.length > 0) {
+      const taskName = task?.title ?? 'a task'
+      const commenterName = profile.full_name ?? 'Someone'
+      fetch('/api/telegram-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: recipientIds,
+          message: `💬 <b>New comment on "${taskName}"</b>\n\n<b>${commenterName}:</b> ${body}`,
+        }),
+      }).catch(() => {}) // fire-and-forget
+    }
   }
 
   const addSubtask = async () => {
