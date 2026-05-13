@@ -68,8 +68,9 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
   const [dateFrom,  setDateFrom]  = useState(mtdStart)
   const [dateTo,    setDateTo]    = useState(today)
   const [clientId,  setClientId]  = useState('')
-  const [counts,    setCounts]    = useState<Record<string, number>>({})
-  const [loading,   setLoading]   = useState(true)
+  const [counts,        setCounts]        = useState<Record<string, number>>({})
+  const [postedByType,  setPostedByType]  = useState<Record<string, number>>({})
+  const [loading,       setLoading]       = useState(true)
 
   const supabase = createClient()
 
@@ -78,7 +79,7 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
       setLoading(true)
       let q = (supabase as any)
         .from('content_items')
-        .select('design_status, internal_review, client_approval, live_links')
+        .select('design_status, internal_review, client_approval, live_links, content_type')
         .not('status', 'eq', 'cancelled')
         .gte('publish_at', dateFrom)
         .lte('publish_at', dateTo + 'T23:59:59')
@@ -87,22 +88,29 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
 
       const { data } = await q
       const c: Record<string, number> = {}
+      const byType: Record<string, number> = {}
       for (const row of (data ?? [])) {
         const key = deriveOverallStatus(row)
         c[key] = (c[key] ?? 0) + 1
+        if (key === 'Posted' && row.content_type) {
+          byType[row.content_type] = (byType[row.content_type] ?? 0) + 1
+        }
       }
       setCounts(c)
+      setPostedByType(byType)
       setLoading(false)
     }
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFrom, dateTo, clientId])
 
-  const total    = Object.values(counts).reduce((s, n) => s + n, 0)
-  const notStarted = counts['Not Started'] ?? 0
-  const posted     = counts['Posted']      ?? 0
+  const total = Object.values(counts).reduce((s, n) => s + n, 0)
 
   const sel = 'h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400'
+
+  // Posted by type — sorted descending
+  const postedTypeEntries = Object.entries(postedByType).sort((a, b) => b[1] - a[1])
+  const postedTotal = counts['Posted'] ?? 0
 
   return (
     <div className="p-3 sm:p-5 space-y-4">
@@ -110,18 +118,13 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
       {/* ── Filter bar ─────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
         <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 shrink-0">Filter</label>
-
-        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-          className={sel} />
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className={sel} />
         <span className="text-xs text-gray-400">to</span>
-        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-          className={sel} />
-
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className={sel} />
         <select value={clientId} onChange={e => setClientId(e.target.value)} className={`${sel} min-w-[140px]`}>
           <option value="">All clients</option>
           {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-
         <button
           onClick={() => { setDateFrom(mtdStart); setDateTo(today); setClientId('') }}
           className="text-[10px] font-semibold text-violet-500 hover:text-violet-700 underline underline-offset-2"
@@ -130,27 +133,19 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
         </button>
       </div>
 
-      {/* ── 3 hero stats ───────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: 'Total Content', value: total,      icon: FileText,    color: 'bg-gray-50 text-gray-500'    },
-          { label: 'Not Started',   value: notStarted, icon: Clock,       color: 'bg-amber-50 text-amber-500'  },
-          { label: 'Posted',        value: posted,     icon: CheckCheck,  color: 'bg-green-50 text-green-600'  },
-        ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white/60 rounded-xl border border-white/70 p-4 sm:p-5">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color} mb-3`}>
-              <Icon size={15} />
-            </div>
-            <p className={`text-4xl sm:text-5xl font-bold leading-none mb-1 ${loading ? 'opacity-30' : ''} text-gray-900`}>
-              {value}
-            </p>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+      {/* ── Stage cards (Total + 8 stages) ─────────────────────────────────── */}
+      <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-9 gap-3">
+        {/* Total card */}
+        <div className="bg-white/60 rounded-xl border border-white/70 p-3 sm:p-4">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="w-2 h-2 rounded-full shrink-0 bg-gray-900" />
+            <p className="text-[9px] font-bold uppercase tracking-widest text-gray-500 leading-tight">Total</p>
           </div>
-        ))}
-      </div>
+          <p className={`text-3xl sm:text-4xl font-bold text-gray-900 leading-none mb-1 ${loading ? 'opacity-30' : ''}`}>{total}</p>
+          <p className="text-[10px] text-gray-400 mt-1">items</p>
+          <div className="mt-2 h-1 bg-gray-200 rounded-full" />
+        </div>
 
-      {/* ── Stage breakdown cards ───────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {STAGES.map(({ key, label, numColor, dotColor }) => {
           const count = counts[key] ?? 0
           const pct   = total ? Math.round((count / total) * 100) : 0
@@ -195,6 +190,41 @@ function PipelinePanel({ clients }: { clients: { id: string; name: string }[] })
           ))}
         </div>
       </div>
+
+      {/* ── Posted breakdown by content type ────────────────────────────────── */}
+      {postedTotal > 0 && (
+        <div className="bg-white/60 rounded-xl border border-white/70 p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Posted — by Content Type</p>
+              <p className="text-[10px] text-gray-400 mt-0.5">{postedTotal} posted items</p>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {postedTypeEntries.length === 0
+              ? <p className="text-xs text-gray-400">No type data</p>
+              : postedTypeEntries.map(([type, count]) => {
+                  const pct = postedTotal ? Math.round((count / postedTotal) * 100) : 0
+                  const label = type.charAt(0).toUpperCase() + type.slice(1).replace(/_/g, ' ')
+                  return (
+                    <div key={type}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-medium text-gray-700">{label}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-gray-900">{count}</span>
+                          <span className="text-[10px] text-gray-400 w-7 text-right">{pct}%</span>
+                        </div>
+                      </div>
+                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="h-full bg-green-400 rounded-full" style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
 }
