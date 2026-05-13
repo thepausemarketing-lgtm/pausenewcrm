@@ -1,34 +1,179 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { ListTodo, CalendarDays, BarChart2, Users, Activity, TrendingUp, AlertTriangle, Clock, CheckCircle2 } from 'lucide-react'
-import StatusBadge from '@/components/shared/StatusBadge'
+import { ListTodo, BarChart2, Users, Activity, TrendingUp, AlertTriangle, Clock, CheckCircle2, FileText, Send } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface HeroStat  { label: string; value: number; href: string; warn: boolean }
 interface TaskItem  { id: string; title: string; priority: string; status: string; due_date: string | null; client: { name: string; slug: string } | null }
-interface ContentItem { id: string; title: string; status: string; publish_at: string | null; client: { name: string; slug: string } | null }
-interface PipelineItem { key: string; label: string; numColor: string; bg: string; dotColor: string; count: number }
 interface TeamMember { id: string; full_name: string; avatar_url: string | null; contentToday: number; tasksToday: number; overdueContent: number; overdueTasks: number }
 interface ActivityItem { id: string; actorName: string; action: string; entityType: string | null; entityId: string | null; entityName: string | null; createdAt: string }
 interface TaskPriority { value: string; label: string; color: string }
-interface ContentStatus { value: string; label: string; color: string }
 
 interface Props {
   greeting: string; firstName: string; todayLabel: string
-  heroStats: HeroStat[]; tasks: TaskItem[]; content: ContentItem[]
-  pipeline: PipelineItem[]; team: TeamMember[]; activity: ActivityItem[]
-  taskPriorities: TaskPriority[]; contentStatuses: ContentStatus[]
+  heroStats: HeroStat[]; tasks: TaskItem[]
+  team: TeamMember[]; activity: ActivityItem[]
+  taskPriorities: TaskPriority[]
+  clients: { id: string; name: string }[]
 }
 
 const TABS = [
-  { id: 'tasks',    label: 'My Tasks',        icon: ListTodo    },
-  { id: 'content',  label: 'Upcoming Content', icon: CalendarDays },
-  { id: 'pipeline', label: 'Content Pipeline', icon: BarChart2   },
-  { id: 'team',     label: 'Team Overview',    icon: Users       },
-  { id: 'activity', label: 'Activity',         icon: Activity    },
+  { id: 'tasks',    label: 'My Tasks',        icon: ListTodo  },
+  { id: 'pipeline', label: 'Content Pipeline', icon: BarChart2 },
+  { id: 'team',     label: 'Team Overview',    icon: Users     },
+  { id: 'activity', label: 'Activity',         icon: Activity  },
 ]
+
+// ── Pipeline stage config ─────────────────────────────────────────────────────
+const STAGES = [
+  { key: 'draft',     label: 'Draft',     numColor: 'text-gray-700',   dotColor: 'bg-gray-300'   },
+  { key: 'in_review', label: 'In Review', numColor: 'text-amber-700',  dotColor: 'bg-amber-400'  },
+  { key: 'approved',  label: 'Approved',  numColor: 'text-blue-700',   dotColor: 'bg-blue-500'   },
+  { key: 'scheduled', label: 'Scheduled', numColor: 'text-indigo-700', dotColor: 'bg-indigo-400' },
+  { key: 'published', label: 'Published', numColor: 'text-green-700',  dotColor: 'bg-green-500'  },
+] as const
+
+// ── PipelinePanel ─────────────────────────────────────────────────────────────
+function PipelinePanel({ clients }: { clients: { id: string; name: string }[] }) {
+  const today     = new Date().toISOString().split('T')[0]
+  const mtdStart  = today.slice(0, 8) + '01'   // e.g. 2026-05-01
+
+  const [dateFrom,  setDateFrom]  = useState(mtdStart)
+  const [dateTo,    setDateTo]    = useState(today)
+  const [clientId,  setClientId]  = useState('')
+  const [counts,    setCounts]    = useState<Record<string, number>>({})
+  const [loading,   setLoading]   = useState(true)
+
+  const supabase = createClient()
+
+  useEffect(() => {
+    const fetch = async () => {
+      setLoading(true)
+      let q = (supabase as any)
+        .from('content_items')
+        .select('status')
+        .not('status', 'eq', 'cancelled')
+        .gte('publish_at', dateFrom)
+        .lte('publish_at', dateTo + 'T23:59:59')
+
+      if (clientId) q = q.eq('client_id', clientId)
+
+      const { data } = await q
+      const c: Record<string, number> = {}
+      for (const row of (data ?? [])) {
+        c[row.status] = (c[row.status] ?? 0) + 1
+      }
+      setCounts(c)
+      setLoading(false)
+    }
+    fetch()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFrom, dateTo, clientId])
+
+  const total     = Object.values(counts).reduce((s, n) => s + n, 0)
+  const draft     = counts['draft']     ?? 0
+  const published = counts['published'] ?? 0
+
+  const sel = 'h-8 px-2.5 text-xs border border-gray-200 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400'
+
+  return (
+    <div className="p-3 sm:p-5 space-y-4">
+
+      {/* ── Filter bar ─────────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 shrink-0">Filter</label>
+
+        <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+          className={sel} />
+        <span className="text-xs text-gray-400">to</span>
+        <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+          className={sel} />
+
+        <select value={clientId} onChange={e => setClientId(e.target.value)} className={`${sel} min-w-[140px]`}>
+          <option value="">All clients</option>
+          {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+
+        <button
+          onClick={() => { setDateFrom(mtdStart); setDateTo(today); setClientId('') }}
+          className="text-[10px] font-semibold text-violet-500 hover:text-violet-700 underline underline-offset-2"
+        >
+          Reset to MTD
+        </button>
+      </div>
+
+      {/* ── 3 hero stats ───────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label: 'Total Content', value: total,     icon: FileText,     color: 'bg-gray-50 text-gray-500'   },
+          { label: 'In Draft',      value: draft,     icon: Clock,        color: 'bg-amber-50 text-amber-500' },
+          { label: 'Published',     value: published, icon: Send,         color: 'bg-green-50 text-green-600' },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <div key={label} className="bg-white/60 rounded-xl border border-white/70 p-4 sm:p-5">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${color} mb-3`}>
+              <Icon size={15} />
+            </div>
+            <p className={`text-4xl sm:text-5xl font-bold leading-none mb-1 ${loading ? 'opacity-30' : ''} text-gray-900`}>
+              {value}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{label}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* ── Stage breakdown cards ───────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {STAGES.map(({ key, label, numColor, dotColor }) => {
+          const count = counts[key] ?? 0
+          const pct   = total ? Math.round((count / total) * 100) : 0
+          return (
+            <Link key={key} href={`/app/calendar?status=${key}`}
+              className="bg-white/60 rounded-xl border border-white/70 p-4 hover:bg-white/80 transition-all group">
+              <div className="flex items-center gap-1.5 mb-3">
+                <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
+              </div>
+              <p className={`text-4xl font-bold ${numColor} leading-none mb-1 ${loading ? 'opacity-30' : ''}`}>{count}</p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-xs text-gray-400">items</p>
+                <p className={`text-xs font-bold ${numColor}`}>{pct}%</p>
+              </div>
+              <div className="mt-2.5 h-1 bg-gray-100 rounded-full overflow-hidden">
+                <div className={`h-full ${dotColor} rounded-full`} style={{ width: `${pct}%` }} />
+              </div>
+            </Link>
+          )
+        })}
+      </div>
+
+      {/* ── Distribution bar ────────────────────────────────────────────────── */}
+      <div className="bg-white/60 rounded-xl border border-white/70 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Pipeline Distribution</p>
+          <p className="text-xs text-gray-400">{total} total items</p>
+        </div>
+        <div className="flex rounded-full overflow-hidden h-3 mb-3 gap-0.5">
+          {STAGES.map(({ key, dotColor }) => {
+            const pct = total ? ((counts[key] ?? 0) / total) * 100 : 0
+            return pct > 0 ? <div key={key} className={`h-full ${dotColor}`} style={{ width: `${pct}%` }} /> : null
+          })}
+        </div>
+        <div className="flex gap-4 flex-wrap">
+          {STAGES.map(({ key, label, dotColor }) => (
+            <div key={key} className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${dotColor}`} />
+              <span className="text-xs text-gray-500">{label}</span>
+              <span className="text-xs font-bold text-gray-800">{counts[key] ?? 0}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
 
 const card = 'bg-[rgb(243,245,249)] rounded-2xl border border-white/70 shadow-[0_4px_24px_rgba(0,0,0,0.06)]'
 
@@ -63,8 +208,8 @@ function StatChip({ icon: Icon, label, value, color }: { icon: React.ElementType
 
 export default function DashboardTabs({
   greeting, firstName, todayLabel, heroStats,
-  tasks, content, pipeline, team, activity,
-  taskPriorities, contentStatuses,
+  tasks, team, activity,
+  taskPriorities, clients,
 }: Props) {
   const [activeTab, setActiveTab] = useState('tasks')
 
@@ -191,127 +336,8 @@ export default function DashboardTabs({
           </>
         )}
 
-        {/* ── UPCOMING CONTENT ──────────────────────────────────────────────── */}
-        {activeTab === 'content' && (
-          <>
-            {/* Summary strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3 sm:p-4 border-b border-white/50">
-              {(['approved','scheduled','published','in_review'] as const).map(s => {
-                const st = contentStatuses.find(x => x.value === s)
-                const cnt = content.filter(c => c.status === s).length
-                return (
-                  <div key={s} className="bg-white/60 rounded-xl px-4 py-3 border border-white/70">
-                    <p className="text-2xl font-bold text-gray-900">{cnt}</p>
-                    <div className="flex items-center gap-1.5 mt-1">
-                      {st && <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: st.color }} />}
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{st?.label ?? s}</p>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            {content.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-16">No upcoming content</p>
-            ) : (
-              <>
-                <div className="flex items-center justify-between px-3 sm:px-6 py-3 border-b border-gray-100/60">
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{content.length} items scheduled</p>
-                  <Link href="/app/calendar" className="text-xs font-semibold text-gray-500 hover:text-gray-900 transition-colors">Open calendar →</Link>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[420px]">
-                    <thead>
-                      <tr className="border-b border-gray-100/50">
-                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-6 py-2.5">Title</th>
-                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-28 sm:w-36">Publish Date</th>
-                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-24 sm:w-28">Status</th>
-                        <th className="text-left text-[10px] font-bold uppercase tracking-widest text-gray-400 px-3 sm:px-4 py-2.5 w-28 sm:w-36 hidden sm:table-cell">Client</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {content.map((item) => {
-                        const st = contentStatuses.find(s => s.value === item.status)
-                        return (
-                          <tr key={item.id} className="border-b border-gray-50/80 last:border-0 hover:bg-white/50 transition-colors">
-                            <td className="px-3 sm:px-6 py-3">
-                              <Link href={`/app/calendar/${item.id}`} className="text-sm font-medium text-gray-700 hover:text-gray-900">{item.title}</Link>
-                            </td>
-                            <td className="px-3 sm:px-4 py-3 text-xs text-gray-500 font-medium">
-                              {item.publish_at ? new Date(item.publish_at).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) : '—'}
-                            </td>
-                            <td className="px-3 sm:px-4 py-3">
-                              {st && <StatusBadge label={st.label} color={st.color} />}
-                            </td>
-                            <td className="px-3 sm:px-4 py-3 hidden sm:table-cell">
-                              {item.client
-                                ? <Link href={`/app/clients/${item.client.slug}`} className="text-xs text-gray-500 hover:text-gray-800 font-medium">{item.client.name}</Link>
-                                : <span className="text-xs text-gray-300">—</span>}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
         {/* ── CONTENT PIPELINE ──────────────────────────────────────────────── */}
-        {activeTab === 'pipeline' && (
-          <div className="p-3 sm:p-5">
-            {/* Big KPI cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5">
-              {pipeline.map(({ key, label, numColor, dotColor, count }) => {
-                const total = pipeline.reduce((s, p) => s + p.count, 0)
-                const pct = total ? Math.round((count / total) * 100) : 0
-                return (
-                  <Link key={key} href={`/app/calendar?status=${key}`}
-                    className="bg-white/60 rounded-xl border border-white/70 p-5 hover:bg-white/80 transition-all group">
-                    <div className="flex items-center gap-1.5 mb-4">
-                      <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">{label}</p>
-                    </div>
-                    <p className={`text-5xl font-bold ${numColor} leading-none mb-2`}>{count}</p>
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-gray-400">items</p>
-                      <p className={`text-xs font-bold ${numColor}`}>{pct}%</p>
-                    </div>
-                    {/* Mini bar */}
-                    <div className="mt-3 h-1 bg-gray-100 rounded-full overflow-hidden">
-                      <div className={`h-full ${dotColor} rounded-full transition-all`} style={{ width: `${pct}%` }} />
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-            {/* Distribution bar */}
-            <div className="bg-white/60 rounded-xl border border-white/70 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Pipeline Distribution</p>
-                <p className="text-xs text-gray-400">{pipeline.reduce((s, p) => s + p.count, 0)} total items</p>
-              </div>
-              <div className="flex rounded-full overflow-hidden h-3 mb-3 gap-0.5">
-                {pipeline.map(({ key, dotColor, count }) => {
-                  const total = pipeline.reduce((s, p) => s + p.count, 0)
-                  const pct = total ? (count / total) * 100 : 0
-                  return pct > 0 ? <div key={key} className={`h-full ${dotColor}`} style={{ width: `${pct}%` }} /> : null
-                })}
-              </div>
-              <div className="flex gap-4 flex-wrap">
-                {pipeline.map(({ key, label, dotColor, count }) => (
-                  <div key={key} className="flex items-center gap-1.5">
-                    <span className={`w-2 h-2 rounded-full ${dotColor}`} />
-                    <span className="text-xs text-gray-500">{label}</span>
-                    <span className="text-xs font-bold text-gray-800">{count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {activeTab === 'pipeline' && <PipelinePanel clients={clients} />}
 
         {/* ── TEAM OVERVIEW ─────────────────────────────────────────────────── */}
         {activeTab === 'team' && (

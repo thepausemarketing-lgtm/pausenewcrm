@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getVisibleUserIds } from '@/lib/supabase/helpers'
-import { TASK_PRIORITIES, CONTENT_STATUSES } from '@/lib/constants'
+import { TASK_PRIORITIES } from '@/lib/constants'
 import DashboardTabs from '@/components/dashboard/DashboardTabs'
 
 export default async function DashboardPage() {
@@ -21,8 +21,7 @@ export default async function DashboardPage() {
     contentThisWeekRes,
     overdueTasksRes,
     myTasksRes,
-    contentRes,
-    pipelineRes,
+    clientsListRes,
   ] = await Promise.all([
     supabase.from('profiles').select('full_name').eq('id', user.id).single(),
     getVisibleUserIds(supabase, user.id),
@@ -36,13 +35,7 @@ export default async function DashboardPage() {
       .not('status', 'in', '(done,cancelled)')
       .order('due_date', { ascending: true, nullsFirst: false })
       .limit(20),
-    supabase.from('content_items')
-      .select('id, title, status, publish_at, client:clients(name,slug)')
-      .gte('publish_at', nowIso)
-      .in('status', ['approved', 'scheduled', 'published'])
-      .order('publish_at', { ascending: true })
-      .limit(20),
-    supabase.from('content_items').select('status').not('status', 'eq', 'cancelled'),
+    supabase.from('clients').select('id, name').eq('status', 'active').order('name'),
   ])
 
   // ── Greeting ─────────────────────────────────────────────────────────────────
@@ -65,27 +58,8 @@ export default async function DashboardPage() {
     status: t.status, due_date: t.due_date, client: t.client ?? null,
   }))
 
-  // ── Upcoming Content ──────────────────────────────────────────────────────────
-  const content = (contentRes.data ?? []).map((c: any) => ({
-    id: c.id, title: c.title, status: c.status,
-    publish_at: c.publish_at, client: c.client ?? null,
-  }))
-
-  // ── Content Pipeline ──────────────────────────────────────────────────────────
-  const pipelineStatuses = ['draft', 'in_review', 'approved', 'scheduled', 'published'] as const
-  type PS = typeof pipelineStatuses[number]
-  const pipelineCounts = pipelineStatuses.reduce<Record<PS, number>>((acc, s) => {
-    acc[s] = (pipelineRes.data ?? []).filter((i: any) => i.status === s).length
-    return acc
-  }, { draft: 0, in_review: 0, approved: 0, scheduled: 0, published: 0 })
-
-  const pipeline = [
-    { key: 'draft',     label: 'Draft',     numColor: 'text-gray-700',   bg: 'bg-gray-50',   dotColor: 'bg-gray-300',   count: pipelineCounts.draft },
-    { key: 'in_review', label: 'In Review', numColor: 'text-amber-700',  bg: 'bg-amber-50',  dotColor: 'bg-amber-400',  count: pipelineCounts.in_review },
-    { key: 'approved',  label: 'Approved',  numColor: 'text-blue-700',   bg: 'bg-blue-50',   dotColor: 'bg-blue-500',   count: pipelineCounts.approved },
-    { key: 'scheduled', label: 'Scheduled', numColor: 'text-indigo-700', bg: 'bg-indigo-50', dotColor: 'bg-indigo-400', count: pipelineCounts.scheduled },
-    { key: 'published', label: 'Published', numColor: 'text-green-700',  bg: 'bg-green-50',  dotColor: 'bg-green-500',  count: pipelineCounts.published },
-  ]
+  // ── Clients list (for pipeline filter dropdown) ───────────────────────────────
+  const clients = (clientsListRes.data ?? []) as { id: string; name: string }[]
 
   // ── Activity + Team — both depend on visibleIds, run in parallel ──────────────
   const subordinateIds = visibleIds ? visibleIds.filter(id => id !== user.id) : null
@@ -116,13 +90,13 @@ export default async function DashboardPage() {
   const clientIds   = [...new Set(rawLogs.filter((l: any) => l.entity_type === 'client').map((l: any) => l.entity_id).filter(Boolean))]
 
   const [taskNamesRes, contentNamesRes, clientNamesRes] = await Promise.all([
-    taskIds.length    > 0 ? supabase.from('tasks').select('id, title').in('id', taskIds)         : Promise.resolve({ data: [] }),
+    taskIds.length    > 0 ? supabase.from('tasks').select('id, title').in('id', taskIds)             : Promise.resolve({ data: [] }),
     contentIds.length > 0 ? supabase.from('content_items').select('id, title').in('id', contentIds) : Promise.resolve({ data: [] }),
-    clientIds.length  > 0 ? supabase.from('clients').select('id, name').in('id', clientIds)      : Promise.resolve({ data: [] }),
+    clientIds.length  > 0 ? supabase.from('clients').select('id, name').in('id', clientIds)          : Promise.resolve({ data: [] }),
   ])
 
   const entityNameMap: Record<string, string> = {}
-  for (const t of (taskNamesRes.data ?? []) as any[])   entityNameMap[t.id] = t.title
+  for (const t of (taskNamesRes.data ?? []) as any[])    entityNameMap[t.id] = t.title
   for (const c of (contentNamesRes.data ?? []) as any[]) entityNameMap[c.id] = c.title
   for (const c of (clientNamesRes.data ?? []) as any[])  entityNameMap[c.id] = c.name
 
@@ -199,12 +173,10 @@ export default async function DashboardPage() {
       todayLabel={todayLabel}
       heroStats={heroStats}
       tasks={tasks}
-      content={content}
-      pipeline={pipeline}
       team={team}
       activity={activity}
       taskPriorities={TASK_PRIORITIES}
-      contentStatuses={CONTENT_STATUSES}
+      clients={clients}
     />
   )
 }
