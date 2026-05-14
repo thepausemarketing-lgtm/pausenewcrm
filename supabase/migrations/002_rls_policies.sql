@@ -99,13 +99,20 @@ CREATE POLICY "content_items_insert" ON content_items
     OR (current_user_role() = 'member' AND status IN ('draft', 'in_review'))
   );
 
--- Members can update only their own content and only non-approval fields
+-- Members can update their own content (primary assignee OR co-assignee via junction table)
 -- Managers/admins can update anything
 CREATE POLICY "content_items_update" ON content_items
   FOR UPDATE TO authenticated
   USING (
     current_user_role() IN ('admin', 'manager')
-    OR (current_user_role() = 'member' AND assigned_to = auth.uid())
+    OR (current_user_role() = 'member' AND (
+      assigned_to = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM content_assignees
+        WHERE content_assignees.content_item_id = content_items.id
+          AND content_assignees.user_id = auth.uid()
+      )
+    ))
   );
 
 CREATE POLICY "content_items_delete" ON content_items

@@ -111,7 +111,15 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
   const [referenceLink, setReferenceLink] = useState(item?.reference_link ?? '')
   const [liveLinks, setLiveLinks] = useState<Record<string, string>>(item?.live_links ?? {})
   const [designDate, setDesignDate] = useState(item?.design_date ?? '')
-  const [profilesList, setProfilesList] = useState<{ id: string; full_name: string }[]>([])
+  // Pre-seed from existing assignees so they're visible immediately (before async load)
+  const [profilesList, setProfilesList] = useState<{ id: string; full_name: string }[]>(() => {
+    if (item?.content_assignees && item.content_assignees.length > 0) {
+      return item.content_assignees
+        .filter(a => a.user)
+        .map(a => ({ id: a.user_id, full_name: a.user!.full_name }))
+    }
+    return []
+  })
 
   // Multi-assignee: initialise from content_assignees OR legacy assigned_to
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>(() => {
