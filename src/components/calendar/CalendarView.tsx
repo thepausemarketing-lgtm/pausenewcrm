@@ -247,6 +247,44 @@ export default function CalendarView({ canApprove, currentUserId }: Props) {
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  // ── useMemo hooks must be declared before any early return ──
+  const getPublishDate = (item: ItemWithRelations) =>
+    item.publish_at ? toLocalDate(new Date(item.publish_at)) : null
+
+  const listItems = useMemo(() => {
+    let filtered: ItemWithRelations[]
+    switch (dateFilter) {
+      case 'today':    filtered = items.filter(i => getPublishDate(i) === today); break
+      case 'tomorrow': filtered = items.filter(i => getPublishDate(i) === tomorrow); break
+      case 'overdue':  filtered = items.filter(i => { const d = getPublishDate(i); const posted = Object.values(i.live_links ?? {}).some(v => v); return !!(d && d < today) && !posted }); break
+      case 'custom':
+        filtered = items.filter(i => {
+          const d = getPublishDate(i); if (!d) return false
+          if (customFrom && d < customFrom) return false
+          if (customTo && d > customTo) return false
+          return true
+        }); break
+      default: filtered = [...items]
+    }
+    if (localClient)   filtered = filtered.filter(i => i.client_id === localClient)
+    if (localPlatform) filtered = filtered.filter(i => i.platforms?.includes(localPlatform as any) || i.platform === localPlatform)
+    if (localStatus)   filtered = filtered.filter(i => i.status === localStatus)
+    if (localAssignee) filtered = filtered.filter(i => i.assigned_to === localAssignee || i.content_assignees?.some((a: any) => a.user_id === localAssignee))
+    return filtered.sort((a, b) => {
+      const da = a.publish_at ?? ''; const db = b.publish_at ?? ''
+      return da < db ? -1 : da > db ? 1 : 0
+    })
+  }, [items, dateFilter, today, tomorrow, customFrom, customTo, localClient, localPlatform, localStatus, localAssignee])
+
+  const dateCounts: Record<DateFilter, number> = useMemo(() => ({
+    all:      items.length,
+    today:    items.filter(i => getPublishDate(i) === today).length,
+    tomorrow: items.filter(i => getPublishDate(i) === tomorrow).length,
+    overdue:  items.filter(i => { const d = getPublishDate(i); const posted = Object.values(i.live_links ?? {}).some(v => v); return !!(d && d < today) && !posted }).length,
+    custom:   dateFilter === 'custom' ? listItems.length : 0,
+  }), [items, today, tomorrow, dateFilter, listItems])
+
+  // ── Early return after ALL hooks ──
   if (isLoading) return <CalendarSkeleton />
 
   const navigate = (dir: number) => {
@@ -328,48 +366,6 @@ export default function CalendarView({ canApprove, currentUserId }: Props) {
   }
 
   const visibleColDefs = ALL_COLUMNS.filter(c => c.always || visibleCols.has(c.key))
-
-  // Date-filtered items for list view
-  // Convert publish_at (UTC) to local date string for comparison with today/tomorrow
-  const getPublishDate = (item: ItemWithRelations) =>
-    item.publish_at ? toLocalDate(new Date(item.publish_at)) : null
-
-  const listItems = useMemo(() => {
-    let filtered: ItemWithRelations[]
-    switch (dateFilter) {
-      case 'today':    filtered = items.filter(i => getPublishDate(i) === today); break
-      case 'tomorrow': filtered = items.filter(i => getPublishDate(i) === tomorrow); break
-      case 'overdue':  filtered = items.filter(i => { const d = getPublishDate(i); const posted = Object.values(i.live_links ?? {}).some(v => v); return !!(d && d < today) && !posted }); break
-      case 'custom':
-        filtered = items.filter(i => {
-          const d = getPublishDate(i); if (!d) return false
-          if (customFrom && d < customFrom) return false
-          if (customTo && d > customTo) return false
-          return true
-        }); break
-      default: filtered = [...items]
-    }
-    // Apply local filters (instant, no server round-trip)
-    if (localClient)   filtered = filtered.filter(i => i.client_id === localClient)
-    if (localPlatform) filtered = filtered.filter(i => i.platforms?.includes(localPlatform as any) || i.platform === localPlatform)
-    if (localStatus)   filtered = filtered.filter(i => i.status === localStatus)
-    if (localAssignee) filtered = filtered.filter(i => i.assigned_to === localAssignee || i.content_assignees?.some((a: any) => a.user_id === localAssignee))
-
-    // Always sort ascending by publish date
-    return filtered.sort((a, b) => {
-      const da = a.publish_at ?? ''
-      const db = b.publish_at ?? ''
-      return da < db ? -1 : da > db ? 1 : 0
-    })
-  }, [items, dateFilter, today, tomorrow, customFrom, customTo, localClient, localPlatform, localStatus, localAssignee])
-
-  const dateCounts: Record<DateFilter, number> = {
-    all:      items.length,
-    today:    items.filter(i => getPublishDate(i) === today).length,
-    tomorrow: items.filter(i => getPublishDate(i) === tomorrow).length,
-    overdue:  items.filter(i => { const d = getPublishDate(i); const posted = Object.values(i.live_links ?? {}).some(v => v); return !!(d && d < today) && !posted }).length,
-    custom:   dateFilter === 'custom' ? listItems.length : 0,
-  }
 
   const activeFilterCount = [localClient, localPlatform, localStatus, localAssignee].filter(Boolean).length
 

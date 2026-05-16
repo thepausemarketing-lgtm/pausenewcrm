@@ -152,6 +152,38 @@ export default function MyTasksClient({ currentUserId }: Props) {
     return () => window.removeEventListener('new-task', handler)
   }, [])
 
+  // ── All useMemo hooks must be declared before any early return ──
+  const dateFiltered = useMemo(() => {
+    switch (dateFilter) {
+      case 'today':    return tasks.filter(t => t.due_date === today)
+      case 'tomorrow': return tasks.filter(t => t.due_date === tomorrow)
+      case 'overdue':  return tasks.filter(t => t.due_date && t.due_date < today)
+      case 'custom':
+        return tasks.filter(t => {
+          if (!t.due_date) return false
+          if (customFrom && t.due_date < customFrom) return false
+          if (customTo && t.due_date > customTo) return false
+          return true
+        })
+      default: return tasks
+    }
+  }, [tasks, dateFilter, today, tomorrow, customFrom, customTo])
+
+  const filtered = useMemo(() =>
+    assigneeFilter
+      ? dateFiltered.filter(t => t.task_assignees?.some(a => a.user_id === assigneeFilter))
+      : dateFiltered
+  , [dateFiltered, assigneeFilter])
+
+  const counts: Record<DateFilter, number> = useMemo(() => ({
+    all: tasks.length,
+    today: tasks.filter(t => t.due_date === today).length,
+    tomorrow: tasks.filter(t => t.due_date === tomorrow).length,
+    overdue: tasks.filter(t => t.due_date && t.due_date < today).length,
+    custom: dateFilter === 'custom' ? filtered.length : 0,
+  }), [tasks, today, tomorrow, dateFilter, filtered])
+
+  // ── Early return after ALL hooks ──
   if (isLoading) return <TasksSkeleton />
 
   const handleTaskCreated = (task: TaskWithAssignees) => {
@@ -241,32 +273,6 @@ export default function MyTasksClient({ currentUserId }: Props) {
     })
   }
 
-  const dateFiltered = useMemo(() => {
-    switch (dateFilter) {
-      case 'today':
-        return tasks.filter(t => t.due_date === today)
-      case 'tomorrow':
-        return tasks.filter(t => t.due_date === tomorrow)
-      case 'overdue':
-        return tasks.filter(t => t.due_date && t.due_date < today)
-      case 'custom':
-        return tasks.filter(t => {
-          if (!t.due_date) return false
-          if (customFrom && t.due_date < customFrom) return false
-          if (customTo && t.due_date > customTo) return false
-          return true
-        })
-      default:
-        return tasks
-    }
-  }, [tasks, dateFilter, today, tomorrow, customFrom, customTo])
-
-  const filtered = useMemo(() =>
-    assigneeFilter
-      ? dateFiltered.filter(t => t.task_assignees?.some(a => a.user_id === assigneeFilter))
-      : dateFiltered
-  , [dateFiltered, assigneeFilter])
-
   const downloadCSV = () => {
     const headers = ['Title', 'Priority', 'Status', 'Due Date', 'Client']
     const rows = filtered.map(t => {
@@ -278,14 +284,6 @@ export default function MyTasksClient({ currentUserId }: Props) {
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a'); a.href = url; a.download = 'my-tasks.csv'; a.click(); URL.revokeObjectURL(url)
-  }
-
-  const counts: Record<DateFilter, number> = {
-    all: tasks.length,
-    today: tasks.filter(t => t.due_date === today).length,
-    tomorrow: tasks.filter(t => t.due_date === tomorrow).length,
-    overdue: tasks.filter(t => t.due_date && t.due_date < today).length,
-    custom: dateFilter === 'custom' ? filtered.length : 0,
   }
 
   return (
