@@ -1,16 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { DndContext, DragEndEvent, DragOverlay, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { createClient } from '@/lib/supabase/client'
+import { getVisibleUserIds } from '@/lib/supabase/helpers'
 import { TASK_STATUSES } from '@/lib/constants'
 import type { Task } from '@/types/database.types'
 import TaskCard from './TaskCard'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import NewTaskModal from './NewTaskModal'
 import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 type TaskWithRelations = Task & {
   client?: { name: string; slug: string } | null
@@ -18,24 +19,107 @@ type TaskWithRelations = Task & {
 }
 
 interface Props {
-  initialTasks: TaskWithRelations[]
-  clients: { id: string; name: string }[]
-  profiles: { id: string; full_name: string }[]
   currentUserId: string
 }
 
 const KANBAN_COLS = TASK_STATUSES.filter(s => s.value !== 'cancelled')
 
-export default function KanbanBoard({ initialTasks, clients, profiles, currentUserId }: Props) {
-  const [tasks, setTasks] = useState(initialTasks)
+async function fetchBoardData(userId: string) {
+  const supabase = createClient()
+  const visibleIds = await getVisibleUserIds(supabase, userId)
+
+  let coIds: string[] = []
+  if (visibleIds !== null) {
+    const { data: coAssigned } = await (supabase as any)
+      .from('task_assignees')
+      .select('task_id')
+      .in('user_id', visibleIds)
+    coIds = (coAssigned ?? []).map((r: any) => r.task_id)
+  }
+
+  let tasksQuery = (supabase as any)
+    .from('tasks')
+    .select('*, client:clients(name,slug), task_assignees(user_id, assigned_at, user:profiles!task_assignees_user_id_fkey(id,full_name,avatar_url))')
+    .is('parent_task_id', null)
+    .not('status', 'eq', 'cancelled')
+    .order('position', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false })
+
+  if (visibleIds !== null) {
+    const orParts: string[] = [
+      `assigned_to.in.(${visibleIds.join(',')})`,
+      ...(coIds.length > 0 ? [`id.in.(${coIds.join(',')})`] : []),
+    ]
+    tasksQuery = tasksQuery.or(orParts.join(','))
+  }
+
+  const [{ data: tasks }, { data: clients }, { data: profiles }] = await Promise.all([
+    tasksQuery,
+    supabase.from('clients').select('id,name,parent_client_id').not('status', 'eq', 'churned').order('name'),
+    supabase.from('profiles').select('id,full_name').eq('is_active', true).order('full_name'),
+  ])
+
+  return {
+    tasks: (tasks ?? []) as TaskWithRelations[],
+    clients: (clients ?? []) as { id: string; name: string }[],
+    profiles: (profiles ?? []) as { id: string; full_name: string }[],
+  }
+}
+
+function KanbanSkeleton() {
+  return (
+    <div className="flex gap-4 overflow-x-auto pb-4 flex-1 animate-pulse">
+      {KANBAN_COLS.map(col => (
+        <div key={col.value} className="flex-shrink-0 w-72 flex flex-col">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-2 h-2 rounded-full bg-gray-200" />
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+            <div className="h-4 w-6 bg-gray-100 rounded-full" />
+          </div>
+          <div className="flex-1 space-y-2 min-h-[200px] p-2 rounded-xl bg-gray-50 border border-gray-100">
+            {Array.from({ length: Math.floor(Math.random() * 3) + 1 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-3 space-y-2 border border-gray-100">
+                <div className="h-3.5 bg-gray-200 rounded w-4/5" />
+                <div className="h-3 bg-gray-100 rounded w-1/2" />
+                <div className="flex gap-2">
+                  <div className="h-5 w-14 bg-gray-100 rounded-full" />
+                  <div className="h-5 w-14 bg-gray-100 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+export default function KanbanBoard({ currentUserId }: Props) {
+  const supabase = createClient()
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['kanban', currentUserId],
+    queryFn: () => fetchBoardData(currentUserId),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const [tasks, setTasks] = useState<TaskWithRelations[]>([])
+  const clients = data?.clients ?? []
+  const profiles = data?.profiles ?? []
+
+  useEffect(() => {
+    if (data?.tasks) setTasks(data.tasks)
+  }, [data?.tasks])
+
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [newTaskStatus, setNewTaskStatus] = useState<string | null>(null)
-  const supabase = createClient()
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   const tasksByStatus = (status: string) => tasks.filter(t => t.status === status)
+
+  if (isLoading) return <KanbanSkeleton />
 
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { useQuery } from '@tanstack/react-query'
 import {
   format, startOfMonth, endOfMonth, eachDayOfInterval,
   getDay, isToday,
@@ -15,6 +16,8 @@ import ContentItemDrawer from './ContentItemDrawer'
 import ContentKanbanBoard from './ContentKanbanBoard'
 import EmptyState from '@/components/shared/EmptyState'
 import InlineContentRow from './InlineContentRow'
+import { createClient } from '@/lib/supabase/client'
+import { getVisibleUserIds } from '@/lib/supabase/helpers'
 
 type ContentAssigneeRef = {
   user_id: string
@@ -28,15 +31,69 @@ type ItemWithRelations = ContentItem & {
 }
 
 interface Props {
-  items: ItemWithRelations[]
-  boardItems: any[]
-  clients: { id: string; name: string; parent_client_id?: string | null }[]
-  profiles: { id: string; full_name: string }[]
-  year: number
-  month: number
   canApprove: boolean
   currentUserId: string
-  filters: { client?: string; platform?: string; status?: string; assignee?: string }
+}
+
+async function fetchCalendarItems(userId: string, year: number, month: number) {
+  const supabase = createClient()
+  const visibleIds = await getVisibleUserIds(supabase, userId)
+
+  let coContentIds: string[] = []
+  if (visibleIds !== null) {
+    const { data: coAssigned } = await (supabase as any)
+      .from('content_assignees')
+      .select('content_item_id')
+      .in('user_id', visibleIds)
+    coContentIds = (coAssigned ?? []).map((r: any) => r.content_item_id)
+  }
+
+  const buildVisibilityFilter = (q: any) => {
+    if (visibleIds === null) return q
+    const orParts: string[] = [
+      `assigned_to.in.(${visibleIds.join(',')})`,
+      `assigned_to.is.null`,
+      ...(coContentIds.length > 0 ? [`id.in.(${coContentIds.join(',')})`] : []),
+    ]
+    return q.or(orParts.join(','))
+  }
+
+  const startOfMonth = new Date(year, month - 1, 1).toISOString()
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59).toISOString()
+
+  let monthQuery = (supabase as any)
+    .from('content_items')
+    .select('*, client:clients(name,slug,id,logo_url), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
+    .gte('publish_at', startOfMonth)
+    .lte('publish_at', endOfMonth)
+    .order('publish_at', { ascending: true })
+  monthQuery = buildVisibilityFilter(monthQuery)
+
+  let boardQuery = (supabase as any)
+    .from('content_items')
+    .select('*, client:clients(name,slug,id,logo_url), assignee:profiles!content_items_assigned_to_fkey(full_name,avatar_url)')
+    .not('status', 'eq', 'cancelled')
+    .order('created_at', { ascending: false })
+  boardQuery = buildVisibilityFilter(boardQuery)
+
+  const [
+    { data: items },
+    { data: boardItems },
+    { data: clients },
+    { data: profiles },
+  ] = await Promise.all([
+    monthQuery,
+    boardQuery,
+    supabase.from('clients').select('id,name,parent_client_id').not('status', 'eq', 'churned').order('name'),
+    supabase.from('profiles').select('id,full_name').eq('is_active', true).order('full_name'),
+  ])
+
+  return {
+    items: (items ?? []) as ItemWithRelations[],
+    boardItems: (boardItems ?? []) as any[],
+    clients: (clients ?? []) as { id: string; name: string; parent_client_id?: string | null }[],
+    profiles: (profiles ?? []) as { id: string; full_name: string }[],
+  }
 }
 
 const ALL_COLUMNS = [
@@ -86,14 +143,70 @@ const DATE_TABS: { key: DateFilter; label: string; icon: React.ElementType }[] =
   { key: 'custom',   label: 'Custom',   icon: Clock },
 ]
 
-export default function CalendarView({ items: initialItems, boardItems, clients, profiles, year, month, canApprove, currentUserId, filters }: Props) {
-  const router = useRouter()
-  const [items, setItems] = useState(initialItems)
+function CalendarSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
+            <div className="w-8 h-8 bg-gray-200/80 rounded-lg" />
+            <div className="h-5 w-32 bg-gray-200/80 rounded-lg" />
+            <div className="w-8 h-8 bg-gray-200/80 rounded-lg" />
+          </div>
+          <div className="h-8 w-48 bg-gray-200/80 rounded-lg" />
+        </div>
+        <div className="flex gap-2">
+          <div className="h-8 w-20 bg-gray-200/80 rounded-lg" />
+          <div className="h-8 w-24 bg-gray-200/80 rounded-lg" />
+        </div>
+      </div>
+      <div className="flex gap-2">
+        {[60, 60, 80, 70, 65].map((w, i) => (
+          <div key={i} className="h-8 bg-gray-200/80 rounded-full" style={{ width: w }} />
+        ))}
+      </div>
+      <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+        <div className="border-b border-gray-100 px-4 py-3 flex gap-6">
+          {[200, 80, 80, 80, 100, 100, 80].map((w, i) => (
+            <div key={i} className="h-3 bg-gray-200/80 rounded" style={{ width: w }} />
+          ))}
+        </div>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="border-b border-gray-50 px-4 py-3 flex gap-6 items-center">
+            <div className="h-4 flex-1 bg-gray-100 rounded" />
+            <div className="h-4 w-20 bg-gray-100 rounded hidden sm:block" />
+            <div className="h-4 w-16 bg-gray-100 rounded hidden sm:block" />
+            <div className="h-5 w-24 bg-gray-100 rounded-full hidden sm:block" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 
-  // Sync items when server refetches due to filter URL changes
+export default function CalendarView({ canApprove, currentUserId }: Props) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  const now = new Date()
+  const year = parseInt(searchParams.get('year') ?? now.getFullYear().toString())
+  const month = parseInt(searchParams.get('month') ?? (now.getMonth() + 1).toString())
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['calendar', currentUserId, year, month],
+    queryFn: () => fetchCalendarItems(currentUserId, year, month),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const [items, setItems] = useState<ItemWithRelations[]>([])
   useEffect(() => {
-    setItems(initialItems)
-  }, [initialItems])
+    if (data?.items) setItems(data.items)
+  }, [data?.items])
+
+  const boardItems = data?.boardItems ?? []
+  const clients = data?.clients ?? []
+  const profiles = data?.profiles ?? []
+
   const [selectedItem, setSelectedItem] = useState<ItemWithRelations | null>(null)
   const [createDate, setCreateDate] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'board' | 'calendar'>('list')
@@ -110,10 +223,10 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   // Local filter state — instant, no router.push
-  const [localClient, setLocalClient] = useState(filters.client ?? '')
-  const [localPlatform, setLocalPlatform] = useState(filters.platform ?? '')
-  const [localStatus, setLocalStatus] = useState(filters.status ?? '')
-  const [localAssignee, setLocalAssignee] = useState(filters.assignee ?? '')
+  const [localClient, setLocalClient] = useState('')
+  const [localPlatform, setLocalPlatform] = useState('')
+  const [localStatus, setLocalStatus] = useState('')
+  const [localAssignee, setLocalAssignee] = useState('')
   const colPickerRef = useRef<HTMLDivElement>(null)
 
   const today = toLocalDate(new Date())
@@ -134,30 +247,11 @@ export default function CalendarView({ items: initialItems, boardItems, clients,
     return () => document.removeEventListener('mousedown', handler)
   }, [])
 
+  if (isLoading) return <CalendarSkeleton />
+
   const navigate = (dir: number) => {
     const d = new Date(year, month - 1 + dir, 1)
-    const q = new URLSearchParams({
-      year: String(d.getFullYear()),
-      month: String(d.getMonth() + 1),
-      ...(filters.client   ? { client:   filters.client }   : {}),
-      ...(filters.platform ? { platform: filters.platform } : {}),
-      ...(filters.status   ? { status:   filters.status }   : {}),
-      ...(filters.assignee ? { assignee: filters.assignee } : {}),
-    })
-    router.push(`/app/calendar?${q}`)
-  }
-
-  const filterNav = (key: string, value: string) => {
-    const q = new URLSearchParams({
-      year: String(year), month: String(month),
-      ...(filters.client   ? { client:   filters.client }   : {}),
-      ...(filters.platform ? { platform: filters.platform } : {}),
-      ...(filters.status   ? { status:   filters.status }   : {}),
-      ...(filters.assignee ? { assignee: filters.assignee } : {}),
-      ...(value ? { [key]: value } : {}),
-    })
-    if (!value) q.delete(key)
-    router.push(`/app/calendar?${q}`)
+    router.push(`/app/calendar?year=${d.getFullYear()}&month=${d.getMonth() + 1}`)
   }
 
   const itemsForDay = (date: Date) => {

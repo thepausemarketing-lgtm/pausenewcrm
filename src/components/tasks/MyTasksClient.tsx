@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, CheckCircle2, X, Trash2, CornerDownLeft } from 'lucide-react'
 import InlineTaskRow from './InlineTaskRow'
 import { toast } from 'sonner'
@@ -11,14 +12,13 @@ import PageHeader from '@/components/shared/PageHeader'
 import NewTaskModal from './NewTaskModal'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import TaskViewToggle from './TaskViewToggle'
+import { createClient } from '@/lib/supabase/client'
+import { getVisibleUserIds } from '@/lib/supabase/helpers'
 import type { TaskWithAssignees } from '@/app/(app)/app/tasks/page'
 
 type DateFilter = 'all' | 'today' | 'tomorrow' | 'overdue' | 'custom'
 
 interface Props {
-  tasks: TaskWithAssignees[]
-  profiles: { id: string; full_name: string }[]
-  clients: { id: string; name: string }[]
   currentUserId: string
 }
 
@@ -39,8 +39,96 @@ const DATE_TABS: { key: DateFilter; label: string; icon: React.ElementType }[] =
   { key: 'custom',   label: 'Custom',   icon: Clock },
 ]
 
-export default function MyTasksClient({ tasks: initialTasks, profiles, clients, currentUserId }: Props) {
-  const [tasks, setTasks] = useState<TaskWithAssignees[]>(initialTasks)
+async function fetchMyTasksData(userId: string) {
+  const supabase = createClient()
+  const visibleIds = await getVisibleUserIds(supabase, userId)
+
+  let coIds: string[] = []
+  if (visibleIds !== null) {
+    const { data: coAssigned } = await (supabase as any)
+      .from('task_assignees')
+      .select('task_id')
+      .in('user_id', visibleIds ?? [userId])
+    coIds = (coAssigned ?? []).map((r: any) => r.task_id)
+  }
+
+  let tasksQuery = (supabase as any)
+    .from('tasks')
+    .select('*, client:clients(name,slug,logo_url), task_assignees(user_id, assigned_at, user:profiles!task_assignees_user_id_fkey(id,full_name,avatar_url))')
+    .not('status', 'in', '(done,cancelled)')
+    .is('parent_task_id', null)
+    .order('due_date', { ascending: true, nullsFirst: false })
+
+  if (visibleIds !== null) {
+    const orParts: string[] = [
+      `assigned_to.in.(${visibleIds.join(',')})`,
+      ...(coIds.length > 0 ? [`id.in.(${coIds.join(',')})`] : []),
+    ]
+    tasksQuery = tasksQuery.or(orParts.join(','))
+  }
+
+  const [{ data: tasks }, { data: profiles }, { data: clients }] = await Promise.all([
+    tasksQuery,
+    supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
+    supabase.from('clients').select('id, name, parent_client_id').not('status', 'eq', 'churned').order('name'),
+  ])
+
+  return {
+    tasks: (tasks ?? []) as TaskWithAssignees[],
+    profiles: (profiles ?? []) as { id: string; full_name: string }[],
+    clients: (clients ?? []) as { id: string; name: string; parent_client_id?: string | null }[],
+  }
+}
+
+function TasksSkeleton() {
+  return (
+    <div className="max-w-5xl mx-auto p-3 sm:p-6 animate-pulse space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="h-7 w-28 bg-gray-200/80 rounded-lg" />
+        <div className="h-9 w-24 bg-gray-200/80 rounded-lg" />
+      </div>
+      <div className="flex gap-2">
+        {[60, 60, 80, 70, 65].map((w, i) => (
+          <div key={i} className="h-8 bg-gray-200/80 rounded-full" style={{ width: w }} />
+        ))}
+      </div>
+      <div className="bg-white overflow-hidden">
+        <div className="border-b border-gray-100 px-3 py-2.5 flex gap-4">
+          {[200, 80, 40, 80, 100, 80].map((w, i) => (
+            <div key={i} className="h-3 bg-gray-200/80 rounded" style={{ width: w }} />
+          ))}
+        </div>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="border-b border-gray-50 px-3 py-3 flex gap-4 items-center">
+            <div className="w-4 h-4 rounded bg-gray-100 shrink-0" />
+            <div className="h-4 flex-1 bg-gray-100 rounded" />
+            <div className="h-5 w-20 bg-gray-100 rounded-full" />
+            <div className="h-4 w-8 bg-gray-100 rounded" />
+            <div className="h-4 w-20 bg-gray-100 rounded" />
+            <div className="h-5 w-24 bg-gray-100 rounded-full" />
+            <div className="h-4 w-20 bg-gray-100 rounded hidden sm:block" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function MyTasksClient({ currentUserId }: Props) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['my-tasks', currentUserId],
+    queryFn: () => fetchMyTasksData(currentUserId),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const [tasks, setTasks] = useState<TaskWithAssignees[]>([])
+  const profiles = data?.profiles ?? []
+  const clients = data?.clients ?? []
+
+  useEffect(() => {
+    if (data?.tasks) setTasks(data.tasks)
+  }, [data?.tasks])
+
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
@@ -63,6 +151,8 @@ export default function MyTasksClient({ tasks: initialTasks, profiles, clients, 
     window.addEventListener('new-task', handler)
     return () => window.removeEventListener('new-task', handler)
   }, [])
+
+  if (isLoading) return <TasksSkeleton />
 
   const handleTaskCreated = (task: TaskWithAssignees) => {
     setTasks(prev => [task, ...prev])

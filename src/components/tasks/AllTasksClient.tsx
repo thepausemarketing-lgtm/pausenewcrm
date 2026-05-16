@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Plus, List, CalendarDays, Calendar, Clock, AlertCircle, Download, CheckCircle, Trash2, CornerDownLeft } from 'lucide-react'
 import InlineTaskRow from './InlineTaskRow'
 import { toast } from 'sonner'
@@ -11,18 +12,16 @@ import PageHeader from '@/components/shared/PageHeader'
 import NewTaskModal from './NewTaskModal'
 import TaskDetailDrawer from './TaskDetailDrawer'
 import TaskViewToggle from './TaskViewToggle'
+import { createClient } from '@/lib/supabase/client'
+import { getVisibleUserIds } from '@/lib/supabase/helpers'
 import type { TaskWithAssignees } from '@/app/(app)/app/tasks/page'
 
 type DateFilter = 'all' | 'today' | 'tomorrow' | 'overdue' | 'custom'
 
 interface Props {
-  tasks: TaskWithAssignees[]
-  profiles: { id: string; full_name: string }[]
-  clients: { id: string; name: string }[]
   currentUserId: string
 }
 
-// Use local date (not UTC) so Today/Tomorrow match the user's timezone
 function toDateStr(d: Date) {
   return [
     d.getFullYear(),
@@ -39,8 +38,97 @@ const DATE_TABS: { key: DateFilter; label: string; icon: React.ElementType }[] =
   { key: 'custom',   label: 'Custom',   icon: Clock },
 ]
 
-export default function AllTasksClient({ tasks: initialTasks, profiles, clients, currentUserId }: Props) {
-  const [tasks, setTasks] = useState<TaskWithAssignees[]>(initialTasks)
+async function fetchAllTasksData(userId: string) {
+  const supabase = createClient()
+  const visibleIds = await getVisibleUserIds(supabase, userId)
+
+  let coIds: string[] = []
+  if (visibleIds !== null) {
+    const { data: coAssigned } = await (supabase as any)
+      .from('task_assignees')
+      .select('task_id')
+      .in('user_id', visibleIds)
+    coIds = (coAssigned ?? []).map((r: any) => r.task_id)
+  }
+
+  let tasksQuery = (supabase as any)
+    .from('tasks')
+    .select('*, client:clients(name,slug), task_assignees(user_id, assigned_at, user:profiles!task_assignees_user_id_fkey(id,full_name,avatar_url))')
+    .is('parent_task_id', null)
+    .not('status', 'in', '(done,cancelled)')
+    .order('due_date', { ascending: true, nullsFirst: false })
+    .limit(200)
+
+  if (visibleIds !== null) {
+    const orParts: string[] = [
+      `assigned_to.in.(${visibleIds.join(',')})`,
+      ...(coIds.length > 0 ? [`id.in.(${coIds.join(',')})`] : []),
+    ]
+    tasksQuery = tasksQuery.or(orParts.join(','))
+  }
+
+  const [{ data: tasks }, { data: profiles }, { data: clients }] = await Promise.all([
+    tasksQuery,
+    supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
+    supabase.from('clients').select('id, name, parent_client_id').not('status', 'eq', 'churned').order('name'),
+  ])
+
+  return {
+    tasks: (tasks ?? []) as TaskWithAssignees[],
+    profiles: (profiles ?? []) as { id: string; full_name: string }[],
+    clients: (clients ?? []) as { id: string; name: string; parent_client_id?: string | null }[],
+  }
+}
+
+function TasksSkeleton() {
+  return (
+    <div className="max-w-7xl mx-auto p-3 sm:p-6 animate-pulse space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="h-7 w-24 bg-gray-200/80 rounded-lg" />
+        <div className="h-9 w-24 bg-gray-200/80 rounded-lg" />
+      </div>
+      <div className="flex gap-2 flex-wrap">
+        {[60, 60, 80, 70, 65, 90, 80, 80].map((w, i) => (
+          <div key={i} className="h-8 bg-gray-200/80 rounded-full" style={{ width: w }} />
+        ))}
+      </div>
+      <div className="bg-white overflow-hidden">
+        <div className="border-b border-gray-100 px-3 py-2.5 flex gap-4">
+          {[200, 80, 40, 80, 100, 80].map((w, i) => (
+            <div key={i} className="h-3 bg-gray-200/80 rounded" style={{ width: w }} />
+          ))}
+        </div>
+        {Array.from({ length: 10 }).map((_, i) => (
+          <div key={i} className="border-b border-gray-50 px-3 py-3 flex gap-4 items-center">
+            <div className="w-4 h-4 rounded bg-gray-100 shrink-0" />
+            <div className="h-4 flex-1 bg-gray-100 rounded" />
+            <div className="h-5 w-20 bg-gray-100 rounded-full" />
+            <div className="h-4 w-8 bg-gray-100 rounded" />
+            <div className="h-4 w-20 bg-gray-100 rounded" />
+            <div className="h-5 w-24 bg-gray-100 rounded-full" />
+            <div className="h-4 w-20 bg-gray-100 rounded hidden sm:block" />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function AllTasksClient({ currentUserId }: Props) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['all-tasks', currentUserId],
+    queryFn: () => fetchAllTasksData(currentUserId),
+    staleTime: 2 * 60 * 1000,
+  })
+
+  const [tasks, setTasks] = useState<TaskWithAssignees[]>([])
+  const profiles = data?.profiles ?? []
+  const clients = data?.clients ?? []
+
+  useEffect(() => {
+    if (data?.tasks) setTasks(data.tasks)
+  }, [data?.tasks])
+
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
@@ -58,6 +146,8 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
 
   const today = toDateStr(new Date())
   const tomorrow = toDateStr(new Date(Date.now() + 86400000))
+
+  if (isLoading) return <TasksSkeleton />
 
   const handleTaskCreated = (task: TaskWithAssignees) => {
     setTasks(prev => [task, ...prev])
@@ -417,12 +507,10 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           <span className="text-sm font-medium">{selectedIds.size} selected</span>
           <div className="w-px h-4 bg-white/20" />
 
-          {/* Mark Done */}
           <button onClick={() => handleBulkStatusChange('done')} className="flex items-center gap-1.5 text-sm hover:text-green-400 transition-colors">
             <CheckCircle size={14} /> Mark Done
           </button>
 
-          {/* Change Priority */}
           <select onChange={e => e.target.value && handleBulkPriorityChange(e.target.value)} className="bg-transparent text-sm border-none outline-none cursor-pointer">
             <option value="">Set Priority</option>
             <option value="urgent">Urgent</option>
@@ -432,12 +520,10 @@ export default function AllTasksClient({ tasks: initialTasks, profiles, clients,
           </select>
 
           <div className="w-px h-4 bg-white/20" />
-          {/* Bulk Delete */}
           <button onClick={handleBulkDelete} className="flex items-center gap-1.5 text-sm hover:text-red-400 transition-colors">
             <Trash2 size={14} />
           </button>
           <div className="w-px h-4 bg-white/20" />
-          {/* Clear selection */}
           <button onClick={() => setSelectedIds(new Set())} className="text-sm text-white/60 hover:text-white">
             Clear
           </button>
