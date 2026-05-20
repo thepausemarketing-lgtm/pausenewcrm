@@ -3,8 +3,12 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Input } from '@/components/ui/input'
-import { Search, Users } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Search, Users, Plus } from 'lucide-react'
 import { PLATFORMS } from '@/lib/constants'
+import { toast } from 'sonner'
 
 type Influencer = {
   id: string
@@ -24,38 +28,39 @@ function fmt(n: number | null) {
   return n.toString()
 }
 
+const sel = 'w-full h-9 px-2.5 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400'
+
 export default function InfluencersPage() {
   const supabase = createClient()
   const [all, setAll] = useState<Influencer[]>([])
   const [query, setQuery] = useState('')
   const [platform, setPlatform] = useState('')
   const [loading, setLoading] = useState(true)
+  const [showNew, setShowNew] = useState(false)
 
-  useEffect(() => {
-    const run = async () => {
-      setLoading(true)
-      const { data } = await (supabase as any)
-        .from('influencers')
-        .select('id,name,handle,platform,followers,engagement_rate,category')
-        .order('name')
-      // Get campaign counts per influencer
-      const { data: counts } = await (supabase as any)
-        .from('campaign_influencers')
-        .select('influencer_id')
+  const fetchAll = async () => {
+    setLoading(true)
+    const { data } = await (supabase as any)
+      .from('influencers')
+      .select('id,name,handle,platform,followers,engagement_rate,category')
+      .order('name')
+    const { data: counts } = await (supabase as any)
+      .from('campaign_influencers')
+      .select('influencer_id')
 
-      const countMap: Record<string, number> = {}
-      ;(counts ?? []).forEach((r: { influencer_id: string }) => {
-        countMap[r.influencer_id] = (countMap[r.influencer_id] ?? 0) + 1
-      })
+    const countMap: Record<string, number> = {}
+    ;(counts ?? []).forEach((r: { influencer_id: string }) => {
+      countMap[r.influencer_id] = (countMap[r.influencer_id] ?? 0) + 1
+    })
 
-      setAll((data ?? []).map((i: Omit<Influencer, 'campaign_count'>) => ({
-        ...i,
-        campaign_count: countMap[i.id] ?? 0,
-      })))
-      setLoading(false)
-    }
-    run()
-  }, [])
+    setAll((data ?? []).map((i: Omit<Influencer, 'campaign_count'>) => ({
+      ...i,
+      campaign_count: countMap[i.id] ?? 0,
+    })))
+    setLoading(false)
+  }
+
+  useEffect(() => { fetchAll() }, [])
 
   const filtered = all.filter(i => {
     const matchQ = !query || i.name.toLowerCase().includes(query.toLowerCase()) ||
@@ -71,8 +76,11 @@ export default function InfluencersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-gray-900">Influencers</h1>
-          <p className="text-sm text-gray-500 mt-0.5">All influencers across campaigns</p>
+          <p className="text-sm text-gray-500 mt-0.5">Master directory across all campaigns</p>
         </div>
+        <Button onClick={() => setShowNew(true)} className="gap-1.5">
+          <Plus size={14} /> New Influencer
+        </Button>
       </div>
 
       {/* Filters */}
@@ -105,8 +113,8 @@ export default function InfluencersPage() {
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center">
             <Users size={32} className="mx-auto text-gray-200 mb-3" />
-            <p className="text-sm text-gray-500">No influencers found</p>
-            <p className="text-xs text-gray-400 mt-1">Add influencers from within a campaign</p>
+            <p className="text-sm text-gray-500">No influencers yet</p>
+            <Button size="sm" className="mt-3" onClick={() => setShowNew(true)}>+ New Influencer</Button>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -130,10 +138,7 @@ export default function InfluencersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span className="flex items-center gap-1.5">
-                        <span
-                          className="w-2 h-2 rounded-full shrink-0"
-                          style={{ backgroundColor: platformColor(inf.platform) }}
-                        />
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: platformColor(inf.platform) }} />
                         <span className="capitalize text-gray-700">{inf.platform}</span>
                       </span>
                     </td>
@@ -156,6 +161,121 @@ export default function InfluencersPage() {
           </div>
         )}
       </div>
+
+      {showNew && (
+        <NewInfluencerModal
+          onClose={() => setShowNew(false)}
+          onCreated={inf => {
+            setAll(prev => [...prev, { ...inf, campaign_count: 0 }])
+            setShowNew(false)
+          }}
+        />
+      )}
     </div>
+  )
+}
+
+function NewInfluencerModal({
+  onClose, onCreated,
+}: {
+  onClose: () => void
+  onCreated: (inf: Omit<Influencer, 'campaign_count'>) => void
+}) {
+  const supabase = createClient()
+  const [name, setName] = useState('')
+  const [handle, setHandle] = useState('')
+  const [platform, setPlatform] = useState('instagram')
+  const [followers, setFollowers] = useState('')
+  const [engagement, setEngagement] = useState('')
+  const [category, setCategory] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const handleSubmit = async () => {
+    if (!name.trim()) return
+    setLoading(true)
+
+    const { data: user } = await supabase.auth.getUser()
+
+    const { data, error } = await (supabase as any)
+      .from('influencers')
+      .insert({
+        name: name.trim(),
+        handle: handle.replace(/^@/, '') || null,
+        platform,
+        followers: followers ? parseInt(followers) : null,
+        engagement_rate: engagement ? parseFloat(engagement) : null,
+        category: category || null,
+        email: email || null,
+        phone: phone || null,
+        created_by: user.user?.id,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      toast.error('Failed to create influencer')
+      setLoading(false)
+      return
+    }
+
+    toast.success('Influencer created')
+    onCreated(data)
+    setLoading(false)
+  }
+
+  return (
+    <Dialog open onOpenChange={v => !v && onClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New Influencer</DialogTitle>
+        </DialogHeader>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5 col-span-2">
+            <Label>Name *</Label>
+            <Input value={name} onChange={e => setName(e.target.value)} placeholder="Rahul Sharma" autoFocus />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Handle</Label>
+            <Input value={handle} onChange={e => setHandle(e.target.value)} placeholder="@rahul_sharma" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Platform</Label>
+            <select value={platform} onChange={e => setPlatform(e.target.value)} className={sel}>
+              {PLATFORMS.filter(p => !['email', 'blog', 'google_ads'].includes(p.value)).map(p => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Followers</Label>
+            <Input type="number" value={followers} onChange={e => setFollowers(e.target.value)} placeholder="180000" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Engagement Rate (%)</Label>
+            <Input type="number" step="0.1" value={engagement} onChange={e => setEngagement(e.target.value)} placeholder="3.5" />
+          </div>
+          <div className="space-y-1.5 col-span-2">
+            <Label>Category</Label>
+            <Input value={category} onChange={e => setCategory(e.target.value)} placeholder="Fashion, Food, Lifestyle…" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Email</Label>
+            <Input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="rahul@email.com" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Phone</Label>
+            <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 98765 43210" />
+          </div>
+        </div>
+        <div className="flex gap-2 justify-end pt-1">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSubmit} disabled={!name.trim() || loading}>
+            {loading ? 'Creating…' : 'Create Influencer'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   )
 }
