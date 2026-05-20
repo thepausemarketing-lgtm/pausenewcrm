@@ -104,8 +104,8 @@ async function getPageToken(pageId: string, userToken: string): Promise<string> 
 }
 
 // Fetch Facebook Page insights for a month
+// Handles both legacy pages and New Page Experience (NPE) pages
 export async function fetchPageInsights(pageId: string, token: string, month: number, year: number) {
-  // Always resolve to a Page Access Token (insights require it)
   const pageToken = await getPageToken(pageId, token)
 
   const since = new Date(year, month - 1, 1)
@@ -113,8 +113,50 @@ export async function fetchPageInsights(pageId: string, token: string, month: nu
   const sinceTs = Math.floor(since.getTime() / 1000)
   const untilTs = Math.floor(until.getTime() / 1000)
 
-  const metrics = 'page_impressions,page_reach,page_engaged_users,page_post_engagements,page_fan_adds_unique'
+  // Get page info (works for all page types)
+  let followers = 0
+  let isNPE = false
+  try {
+    const pageData = await metaGet(`/${pageId}`, pageToken, {
+      fields: 'fan_count,followers_count,has_transitioned_to_new_page_experience',
+    })
+    followers = pageData.followers_count ?? pageData.fan_count ?? 0
+    isNPE = pageData.has_transitioned_to_new_page_experience ?? false
+  } catch { /* ignore */ }
 
+  // For NPE pages — get metrics from posts published in the month
+  if (isNPE) {
+    try {
+      const postsData = await metaGet(`/${pageId}/posts`, pageToken, {
+        fields: 'id,likes.summary(true),comments.summary(true),shares,created_time',
+        since: String(sinceTs),
+        until: String(untilTs),
+        limit: '100',
+      })
+      const posts = postsData.data ?? []
+      let totalLikes = 0, totalComments = 0, totalShares = 0
+      for (const post of posts) {
+        totalLikes += post.likes?.summary?.total_count ?? 0
+        totalComments += post.comments?.summary?.total_count ?? 0
+        totalShares += post.shares?.count ?? 0
+      }
+      return {
+        followers,
+        followers_gained: 0,
+        reach: 0,
+        impressions: 0,
+        engagement: totalLikes + totalComments + totalShares,
+        posts_count: posts.length,
+      }
+    } catch (e) {
+      console.error('NPE page posts error:', e)
+      // Return just followers if posts also fail
+      return { followers, followers_gained: 0, reach: 0, impressions: 0, engagement: 0, posts_count: 0 }
+    }
+  }
+
+  // Legacy pages — use insights API
+  const metrics = 'page_impressions,page_reach,page_engaged_users,page_post_engagements,page_fan_adds_unique'
   try {
     const data = await metaGet(`/${pageId}/insights`, pageToken, {
       metric: metrics,
@@ -129,20 +171,12 @@ export async function fetchPageInsights(pageId: string, token: string, month: nu
       result[item.name] = typeof val === 'number' ? val : 0
     }
 
-    // Get follower count separately
-    try {
-      const pageData = await metaGet(`/${pageId}`, pageToken, { fields: 'fan_count,followers_count' })
-      result.followers = pageData.followers_count ?? pageData.fan_count ?? 0
-    } catch {
-      // ignore follower fetch errors
-    }
-
     return {
       impressions: result.page_impressions ?? 0,
       reach: result.page_reach ?? 0,
       engagement: result.page_post_engagements ?? 0,
       followers_gained: result.page_fan_adds_unique ?? 0,
-      followers: result.followers ?? 0,
+      followers,
     }
   } catch (e) {
     console.error('Page insights error:', e)
