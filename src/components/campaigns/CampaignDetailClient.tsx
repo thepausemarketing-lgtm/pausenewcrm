@@ -10,6 +10,8 @@ import { CheckSquare, CalendarDays, Plus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import NewTaskModal from '@/components/tasks/NewTaskModal'
 import ContentItemDrawer from '@/components/calendar/ContentItemDrawer'
+import CampaignInfluencersSection from '@/components/influencers/CampaignInfluencersSection'
+import type { PipelineStep, CampaignInfluencer } from '@/components/influencers/CampaignInfluencersSection'
 import type { Campaign, Task, ContentItem } from '@/types/database.types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { getInitials } from '@/lib/utils'
@@ -27,11 +29,14 @@ interface Props {
   profiles: { id: string; full_name: string }[]
   clients: { id: string; name: string; parent_client_id?: string | null }[]
   assignees: CampaignAssignee[]
+  pipelineSteps: PipelineStep[]
+  campaignInfluencers: CampaignInfluencer[]
   currentUserId: string
 }
 
 export default function CampaignDetailClient({
-  campaign, tasks: initialTasks, contentItems: initialContent, profiles, clients, assignees, currentUserId
+  campaign, tasks: initialTasks, contentItems: initialContent, profiles, clients, assignees,
+  pipelineSteps, campaignInfluencers, currentUserId
 }: Props) {
   const [tasks, setTasks] = useState(initialTasks)
   const [contentItems, setContentItems] = useState(initialContent)
@@ -190,6 +195,19 @@ export default function CampaignDetailClient({
             })}
           </div>
         )}
+      </div>
+
+      {/* Influencers */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900">Influencers ({campaignInfluencers.length})</h3>
+        </div>
+        <CampaignInfluencersSection
+          campaignId={campaign.id}
+          initialSteps={pipelineSteps}
+          initialInfluencers={campaignInfluencers}
+          currentUserId={currentUserId}
+        />
       </div>
 
       {/* New Task Modal */}

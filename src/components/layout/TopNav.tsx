@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   LayoutDashboard, Users, CalendarDays, CheckSquare,
   Megaphone, BarChart3, Settings, LogOut, UserCog, RefreshCw,
-  Bell, Menu, X,
+  Bell, Menu, X, Star,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/app/calendar',      icon: CalendarDays,    label: 'Calendar' },
   { href: '/app/tasks',         icon: CheckSquare,     label: 'Tasks' },
   { href: '/app/campaigns',     icon: Megaphone,       label: 'Campaigns' },
+  { href: '/app/influencers',   icon: Star,            label: 'Influencers' },
   { href: '/app/renewals',      icon: RefreshCw,       label: 'Renewals' },
   { href: '/app/reports',       icon: BarChart3,       label: 'Reports' },
   { href: '/app/settings/team', icon: UserCog,         label: 'Team' },
