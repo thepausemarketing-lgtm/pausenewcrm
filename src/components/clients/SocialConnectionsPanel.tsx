@@ -97,7 +97,7 @@ export default function SocialConnectionsPanel({ clientId }: { clientId: string 
       const res = await fetch('/api/meta/pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({}),
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
@@ -136,7 +136,6 @@ export default function SocialConnectionsPanel({ clientId }: { clientId: string 
     toast.success(`Connected ${page.name}`)
     setShowModal(false)
     setPages([])
-    setToken('')
     load()
   }
 

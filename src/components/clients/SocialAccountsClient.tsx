@@ -108,7 +108,7 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
     toast.success(`Connected ${page.name}`)
     setShowModal(false)
     setPages([])
-    setToken('')
+
     window.location.reload()
   }
 
