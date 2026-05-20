@@ -219,13 +219,38 @@ async function runDigest(triggeredBy?: string) {
   return { sent }
 }
 
-// ── GET: Vercel cron trigger ──────────────────────────────────────────────────
+// ── GET: Vercel cron trigger (runs every hour, checks configured time) ────────
 export async function GET(req: Request) {
   const auth = req.headers.get('authorization')
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
-  const result = await runDigest(undefined) // cron — no triggered_by
+
+  // Load configured time from workspace_settings
+  const db = getAdminClient()
+  const { data: settings } = await db
+    .from('workspace_settings')
+    .select('digest_time, digest_timezone')
+    .single()
+
+  const digestTime: string = (settings as any)?.digest_time ?? '19:00'
+  const digestTimezone: string = (settings as any)?.digest_timezone ?? 'Asia/Kolkata'
+  const [configHour] = digestTime.split(':').map(Number)
+
+  // Get current hour in the configured timezone
+  const now = new Date()
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: digestTimezone,
+    hour: 'numeric',
+    hour12: false,
+  }).formatToParts(now)
+  const currentHour = parseInt(parts.find(p => p.type === 'hour')?.value ?? '0')
+
+  if (currentHour !== configHour) {
+    return NextResponse.json({ ok: true, skipped: true, reason: `Not time yet (${currentHour}h ≠ ${configHour}h in ${digestTimezone})` })
+  }
+
+  const result = await runDigest(undefined)
   return NextResponse.json({ ok: true, ...result })
 }
 
