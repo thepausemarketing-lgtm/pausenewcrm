@@ -13,6 +13,7 @@ const TABS = [
   { href: '/details', label: 'Details' },
   { href: '/files', label: 'Files' },
   { href: '/activity', label: 'Activity' },
+  { href: '/report', label: '📊 Report' },
 ]
 
 export default async function ClientLayout({

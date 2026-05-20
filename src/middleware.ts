@@ -35,6 +35,7 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute =
     pathname.startsWith('/login') ||
     pathname.startsWith('/auth/') ||
+    pathname.startsWith('/report/') ||
     pathname === '/'
 
   if (!session && !isAuthRoute) {
