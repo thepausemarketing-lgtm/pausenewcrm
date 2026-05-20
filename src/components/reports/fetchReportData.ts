@@ -9,9 +9,8 @@ export async function fetchReportData(
 ): Promise<ReportData | null> {
   const startDate = `${year}-${String(month).padStart(2, '0')}-01`
   const endDate = new Date(year, month, 0).toISOString().slice(0, 10) // last day of month
-  const now = new Date().toISOString()
 
-  const [clientRes, tasksRes, contentRes, campaignsRes, influencersRes] = await Promise.all([
+  const [clientRes, tasksRes, contentRes, campaignsRes, influencersRes, socialInsightsRes] = await Promise.all([
     supabase.from('clients').select('name,logo_url,industry,website,monthly_value,currency').eq('id', clientId).single(),
     supabase.from('tasks').select('id,status,due_date').eq('client_id', clientId),
     supabase.from('content_items').select('id,status,platform').eq('client_id', clientId)
@@ -20,6 +19,13 @@ export async function fetchReportData(
     supabase.from('campaign_influencers')
       .select('id, post_url, campaign:campaigns!inner(client_id)')
       .eq('campaign.client_id', clientId),
+    // Fetch social insights for the month
+    supabase
+      .from('social_insights')
+      .select('*')
+      .eq('client_id', clientId)
+      .eq('month', month)
+      .eq('year', year),
   ])
 
   if (!clientRes.data) return null
@@ -28,6 +34,7 @@ export async function fetchReportData(
   const content = contentRes.data ?? []
   const campaigns = campaignsRes.data ?? []
   const ciRows = influencersRes.data ?? []
+  const socialInsights = socialInsightsRes.data ?? []
 
   // Task stats
   const doneTasks = tasks.filter((t: any) => t.status === 'done').length
@@ -69,5 +76,6 @@ export async function fetchReportData(
       total: ciRows.length,
       posted: ciRows.filter((ci: any) => ci.post_url).length,
     },
+    socialInsights,
   }
 }

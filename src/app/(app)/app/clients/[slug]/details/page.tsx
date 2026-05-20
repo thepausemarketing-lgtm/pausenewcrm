@@ -5,6 +5,7 @@ import { Mail, Phone, ExternalLink, Star, KeyRound, RefreshCw, Share2 } from 'lu
 import { CAMPAIGN_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import StatusBadge from '@/components/shared/StatusBadge'
+import SocialConnectionsPanel from '@/components/clients/SocialConnectionsPanel'
 import type { Contact, Campaign } from '@/types/database.types'
 
 export default async function ClientDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
@@ -168,6 +169,11 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
           <Share2 size={16} className="text-gray-400" />
           <p className="text-sm font-medium text-gray-900">Manage social accounts</p>
         </Link>
+      </div>
+
+      {/* Connected Channels Section */}
+      <div className="bg-white rounded-xl border border-gray-100 p-5">
+        <SocialConnectionsPanel clientId={client.id} />
       </div>
 
     </div>

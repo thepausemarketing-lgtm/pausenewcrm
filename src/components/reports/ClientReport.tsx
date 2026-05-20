@@ -1,5 +1,25 @@
 import { PLATFORMS } from '@/lib/constants'
 
+export type SocialInsightRow = {
+  id: string
+  connection_id: string
+  client_id: string
+  platform: string
+  month: number
+  year: number
+  followers: number | null
+  followers_gained: number | null
+  reach: number | null
+  impressions: number | null
+  engagement: number | null
+  posts_count: number | null
+  ad_spend: number | null
+  ad_clicks: number | null
+  ad_impressions: number | null
+  ad_conversions: number | null
+  synced_at: string
+}
+
 export type ReportData = {
   client: {
     name: string
@@ -33,6 +53,7 @@ export type ReportData = {
     total: number
     posted: number
   }
+  socialInsights?: SocialInsightRow[]
 }
 
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
@@ -56,8 +77,23 @@ interface Props {
   branded?: boolean
 }
 
+const PLATFORM_DISPLAY: Record<string, { label: string; color: string }> = {
+  facebook_page: { label: 'Facebook Page', color: '#1877F2' },
+  instagram:     { label: 'Instagram',      color: '#E1306C' },
+  google_ads:    { label: 'Google Ads',     color: '#4285F4' },
+  linkedin:      { label: 'LinkedIn',       color: '#0A66C2' },
+  tiktok:        { label: 'TikTok',         color: '#010101' },
+}
+
+function fmtNum(n: number | null | undefined): string {
+  if (n == null) return '—'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return String(n)
+}
+
 export default function ClientReport({ data, branded = true }: Props) {
-  const { client, month, year, tasks, content, campaigns, influencers } = data
+  const { client, month, year, tasks, content, campaigns, influencers, socialInsights } = data
   const monthName = MONTH_NAMES[month - 1]
   const completionRate = tasks.total > 0 ? Math.round((tasks.done / tasks.total) * 100) : 0
   const publishRate = content.total > 0 ? Math.round((content.published / content.total) * 100) : 0
@@ -97,6 +133,66 @@ export default function ClientReport({ data, branded = true }: Props) {
               <p className="text-xs text-gray-400 mt-0.5">{kpi.sub}</p>
             </div>
           ))}
+        </div>
+
+        {/* Channel Insights */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4 uppercase tracking-wide">Channel Insights</h2>
+          {(!socialInsights || socialInsights.length === 0) ? (
+            <div className="border border-dashed border-gray-200 rounded-xl py-6 text-center text-sm text-gray-400">
+              No channel data synced for this month
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {socialInsights.map(row => {
+                const display = PLATFORM_DISPLAY[row.platform] ?? { label: row.platform, color: '#6B7280' }
+                const isAds = row.platform === 'google_ads'
+                return (
+                  <div key={row.id} className="border border-gray-100 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: display.color }}
+                      />
+                      <p className="text-sm font-semibold text-gray-800">{display.label}</p>
+                      <p className="ml-auto text-xs text-gray-400">
+                        {new Date(row.synced_at).toLocaleDateString('en-GB')}
+                      </p>
+                    </div>
+                    {isAds ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'Ad Spend',      value: row.ad_spend != null ? `$${row.ad_spend.toFixed(2)}` : '—' },
+                          { label: 'Clicks',        value: fmtNum(row.ad_clicks) },
+                          { label: 'Impressions',   value: fmtNum(row.ad_impressions) },
+                          { label: 'Conversions',   value: fmtNum(row.ad_conversions) },
+                        ].map(m => (
+                          <div key={m.label} className="bg-gray-50 rounded-lg p-2.5">
+                            <p className="text-lg font-bold text-gray-900">{m.value}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{m.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: 'Followers',     value: fmtNum(row.followers) },
+                          { label: 'Reach',         value: fmtNum(row.reach) },
+                          { label: 'Impressions',   value: fmtNum(row.impressions) },
+                          { label: 'Engagement',    value: fmtNum(row.engagement) },
+                        ].map(m => (
+                          <div key={m.label} className="bg-gray-50 rounded-lg p-2.5">
+                            <p className="text-lg font-bold text-gray-900">{m.value}</p>
+                            <p className="text-xs text-gray-400 mt-0.5">{m.label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Content by Platform */}

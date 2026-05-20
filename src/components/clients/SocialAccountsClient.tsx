@@ -4,10 +4,8 @@ import { useState } from 'react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { RefreshCw, Trash2, Link2, Users, Eye, TrendingUp, MessageCircle, Heart } from 'lucide-react'
-
-const META_APP_ID = process.env.NEXT_PUBLIC_META_APP_ID ?? ''
-const BASE_URL    = process.env.NEXT_PUBLIC_APP_URL ?? 'https://pausenewcrm-pi.vercel.app'
-const REDIRECT    = `${BASE_URL}/api/auth/meta/callback`
+import { toast } from 'sonner'
+import { createClient } from '@/lib/supabase/client'
 
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: '#E1306C',
@@ -34,16 +32,69 @@ interface Props {
   connectError?: string
 }
 
+interface Page {
+  id: string
+  name: string
+  picture: { data: { url: string } }
+  access_token: string
+  instagram_business_account?: { id: string }
+}
+
 export default function SocialAccountsClient({ client, accounts: initialAccounts, insightsMap: initialInsights, currentUserId, justConnected, connectError }: Props) {
+  const supabase = createClient()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
   const [accounts, setAccounts] = useState(initialAccounts)
   const [insightsMap, setInsightsMap] = useState(initialInsights)
   const [loadingId, setLoadingId] = useState<string | null>(null)
+  const [showModal, setShowModal] = useState(false)
+  const [token, setToken] = useState('')
+  const [pages, setPages] = useState<Page[]>([])
+  const [fetching, setFetching] = useState(false)
 
-  const connectMeta = () => {
-    const scope = 'pages_show_list,pages_read_engagement,instagram_basic,instagram_manage_insights,read_insights'
-    const state = `${client.id}|${currentUserId}`
-    const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT)}&state=${encodeURIComponent(state)}&scope=${scope}`
-    window.location.href = url
+  const fetchPages = async () => {
+    setFetching(true)
+    try {
+      const res = await fetch('/api/meta/pages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      })
+      const json = await res.json()
+      if (json.error) throw new Error(json.error)
+      setPages(json.pages)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to fetch pages')
+    }
+    setFetching(false)
+  }
+
+  const connectPage = async (page: Page) => {
+    await db.from('social_connections').upsert({
+      client_id: client.id,
+      platform: 'facebook_page',
+      account_id: page.id,
+      account_name: page.name,
+      account_picture: page.picture?.data?.url ?? null,
+      access_token: page.access_token,
+    }, { onConflict: 'client_id,platform,account_id' })
+
+    if (page.instagram_business_account?.id) {
+      await db.from('social_connections').upsert({
+        client_id: client.id,
+        platform: 'instagram',
+        account_id: page.instagram_business_account.id,
+        account_name: `${page.name} (Instagram)`,
+        account_picture: page.picture?.data?.url ?? null,
+        access_token: page.access_token,
+      }, { onConflict: 'client_id,platform,account_id' })
+    }
+
+    toast.success(`Connected ${page.name}`)
+    setShowModal(false)
+    setPages([])
+    setToken('')
+    window.location.reload()
   }
 
   const refreshInsights = async (accountId: string) => {
@@ -85,7 +136,7 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
             <h3 className="text-sm font-semibold text-gray-900">Connected Social Accounts</h3>
             <p className="text-xs text-gray-400 mt-0.5">Connect social accounts to fetch follower counts and engagement insights.</p>
           </div>
-          <Button onClick={connectMeta} size="sm" className="gap-1.5">
+          <Button onClick={() => setShowModal(true)} size="sm" className="gap-1.5">
             <Link2 size={13} /> Connect Meta (Instagram + Facebook)
           </Button>
         </div>
@@ -98,11 +149,6 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
         {connectError && (
           <div className="mt-3 bg-red-50 border border-red-100 text-red-700 text-xs rounded-lg px-3 py-2">
             Connection failed: {connectError}
-          </div>
-        )}
-        {!META_APP_ID && (
-          <div className="mt-3 bg-amber-50 border border-amber-100 text-amber-700 text-xs rounded-lg px-3 py-2">
-            ⚠️ <strong>NEXT_PUBLIC_META_APP_ID</strong> is not set in environment variables. Add it to Vercel to enable connections.
           </div>
         )}
       </div>
@@ -217,6 +263,56 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Token paste modal */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Connect Meta Account</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Go to{' '}
+              <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">
+                Graph Explorer
+              </a>
+              , select <strong>Pause CRM v2</strong>, generate a token with{' '}
+              <code className="bg-gray-100 px-1 rounded text-xs">pages_show_list, pages_read_engagement, read_insights, instagram_basic, instagram_manage_insights</code>{' '}
+              permissions, and paste it below.
+            </p>
+            <textarea
+              value={token}
+              onChange={e => setToken(e.target.value)}
+              placeholder="Paste access token here..."
+              className="w-full border border-gray-200 rounded-lg p-3 text-xs font-mono h-24 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            {pages.length === 0 ? (
+              <div className="flex gap-2 mt-3">
+                <Button variant="outline" size="sm" onClick={() => { setShowModal(false); setToken('') }} className="flex-1">Cancel</Button>
+                <Button size="sm" onClick={fetchPages} disabled={!token || fetching} className="flex-1">
+                  {fetching ? 'Fetching…' : 'Fetch Pages'}
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2">
+                <p className="text-xs text-gray-500 font-medium">Select a page to connect:</p>
+                {pages.map(page => (
+                  <button key={page.id} onClick={() => connectPage(page)}
+                    className="w-full flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg hover:border-violet-300 hover:bg-violet-50 transition-colors text-left">
+                    {page.picture?.data?.url
+                      ? <img src={page.picture.data.url} className="w-8 h-8 rounded-full" alt="" />
+                      : <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold">f</div>
+                    }
+                    <div>
+                      <div className="text-sm font-medium text-gray-800">{page.name}</div>
+                      <div className="text-xs text-gray-400">{page.instagram_business_account ? '+ Instagram linked' : 'Facebook Page only'}</div>
+                    </div>
+                  </button>
+                ))}
+                <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => { setPages([]); setToken('') }}>← Back</Button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
