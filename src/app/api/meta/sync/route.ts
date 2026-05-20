@@ -19,14 +19,23 @@ export async function POST(request: NextRequest) {
 
   if (error || !conn) return NextResponse.json({ error: 'Connection not found' }, { status: 404 })
 
+  // For BM pages, stored access_token may be empty — fall back to workspace user token
+  const token = conn.access_token || process.env.META_USER_ACCESS_TOKEN || ''
+
   let metrics: Record<string, unknown> | null = null
 
   if (conn.platform === 'facebook_page') {
-    metrics = await fetchPageInsights(conn.account_id, conn.access_token, month, year)
+    // Try page token first, fall back to user token
+    metrics = await fetchPageInsights(conn.account_id, token, month, year)
+    if (!metrics && conn.access_token && process.env.META_USER_ACCESS_TOKEN) {
+      metrics = await fetchPageInsights(conn.account_id, process.env.META_USER_ACCESS_TOKEN, month, year)
+    }
   } else if (conn.platform === 'instagram') {
-    metrics = await fetchInstagramInsights(conn.account_id, conn.access_token, month, year)
+    metrics = await fetchInstagramInsights(conn.account_id, token, month, year)
+    if (!metrics && conn.access_token && process.env.META_USER_ACCESS_TOKEN) {
+      metrics = await fetchInstagramInsights(conn.account_id, process.env.META_USER_ACCESS_TOKEN, month, year)
+    }
   } else if (conn.platform === 'google_ads') {
-    // placeholder
     metrics = { ad_spend: 0, ad_clicks: 0, ad_impressions: 0, ad_conversions: 0 }
   }
 
