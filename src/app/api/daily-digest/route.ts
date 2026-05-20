@@ -139,12 +139,11 @@ async function runDigest(triggeredBy?: string) {
       })
 
       msg += `\n📋 <b>Pending Tasks (${tasks.length})</b>\n`
-      sorted.slice(0, 10).forEach(t => {
+      sorted.forEach(t => {
         const client = t.clientName ? ` <i>[${t.clientName}]</i>` : ''
         const due = t.due_date ? ` — ${formatDate(t.due_date)}` : ''
-        msg += `• ${t.title}${client}${due}\n`
+        msg += `\n• ${t.title}${client}${due}\n`
       })
-      if (tasks.length > 10) msg += `<i>...and ${tasks.length - 10} more</i>\n`
     }
 
     if (content.length > 0) {
@@ -159,13 +158,12 @@ async function runDigest(triggeredBy?: string) {
       })
 
       msg += `\n📸 <b>Pending Content (${content.length})</b>\n`
-      sorted.slice(0, 10).forEach(c => {
+      sorted.forEach(c => {
         const client = c.clientName ? ` <i>[${c.clientName}]</i>` : ''
         const due = c.publish_at ? ` — ${formatDate(c.publish_at)}` : ''
         const status = statusLabel[c.status] ?? c.status
-        msg += `• ${c.title}${client} — ${status}${due}\n`
+        msg += `\n• ${c.title}${client} — ${status}${due}\n`
       })
-      if (content.length > 10) msg += `<i>...and ${content.length - 10} more</i>\n`
     }
 
     msg += `\nHave a productive evening! 💪\n<i>— Pause CRM</i>`
