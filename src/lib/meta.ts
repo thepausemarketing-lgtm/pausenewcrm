@@ -93,8 +93,21 @@ export async function getPageAccessTokens(userToken: string): Promise<PageEntry[
   return allPages
 }
 
+// Get a Page Access Token from a user token (required for insights)
+async function getPageToken(pageId: string, userToken: string): Promise<string> {
+  try {
+    const data = await metaGet(`/${pageId}`, userToken, { fields: 'access_token' })
+    return data.access_token ?? userToken
+  } catch {
+    return userToken
+  }
+}
+
 // Fetch Facebook Page insights for a month
 export async function fetchPageInsights(pageId: string, token: string, month: number, year: number) {
+  // Always resolve to a Page Access Token (insights require it)
+  const pageToken = await getPageToken(pageId, token)
+
   const since = new Date(year, month - 1, 1)
   const until = new Date(year, month, 1)
   const sinceTs = Math.floor(since.getTime() / 1000)
@@ -103,7 +116,7 @@ export async function fetchPageInsights(pageId: string, token: string, month: nu
   const metrics = 'page_impressions,page_reach,page_engaged_users,page_post_engagements,page_fan_adds_unique'
 
   try {
-    const data = await metaGet(`/${pageId}/insights`, token, {
+    const data = await metaGet(`/${pageId}/insights`, pageToken, {
       metric: metrics,
       period: 'month',
       since: String(sinceTs),
@@ -118,7 +131,7 @@ export async function fetchPageInsights(pageId: string, token: string, month: nu
 
     // Get follower count separately
     try {
-      const pageData = await metaGet(`/${pageId}`, token, { fields: 'fan_count,followers_count' })
+      const pageData = await metaGet(`/${pageId}`, pageToken, { fields: 'fan_count,followers_count' })
       result.followers = pageData.followers_count ?? pageData.fan_count ?? 0
     } catch {
       // ignore follower fetch errors
