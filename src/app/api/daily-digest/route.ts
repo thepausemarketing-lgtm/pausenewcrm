@@ -18,6 +18,31 @@ async function sendTelegramMessage(chatId: string, text: string): Promise<boolea
   }
 }
 
+function chunkMessage(text: string, limit = 4000): string[] {
+  if (text.length <= limit) return [text]
+  const chunks: string[] = []
+  let remaining = text
+  while (remaining.length > 0) {
+    if (remaining.length <= limit) { chunks.push(remaining); break }
+    // Split at last newline before limit
+    let cut = remaining.lastIndexOf('\n', limit)
+    if (cut <= 0) cut = limit
+    chunks.push(remaining.slice(0, cut))
+    remaining = remaining.slice(cut).trimStart()
+  }
+  return chunks
+}
+
+async function sendChunked(chatId: string, text: string): Promise<boolean> {
+  const chunks = chunkMessage(text)
+  let allOk = true
+  for (const chunk of chunks) {
+    const ok = await sendTelegramMessage(chatId, chunk)
+    if (!ok) allOk = false
+  }
+  return allOk
+}
+
 function getAdminClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -168,7 +193,7 @@ async function runDigest(triggeredBy?: string) {
 
     msg += `\nHave a productive evening! 💪\n<i>— Pause CRM</i>`
 
-    const ok = await sendTelegramMessage(profile.telegram_chat_id!, msg)
+    const ok = await sendChunked(profile.telegram_chat_id!, msg)
     if (ok) sent++
     sentProfiles.push({ id: profile.id, name: profile.full_name, status: ok ? 'delivered' : 'failed', message: msg })
   }
