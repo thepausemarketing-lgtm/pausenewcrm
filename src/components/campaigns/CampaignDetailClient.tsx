@@ -6,7 +6,7 @@ import { CAMPAIGN_STATUSES, TASK_STATUSES, CONTENT_STATUSES, PLATFORMS } from '@
 import { formatDate, formatCurrency } from '@/lib/utils'
 import StatusBadge from '@/components/shared/StatusBadge'
 import EmptyState from '@/components/shared/EmptyState'
-import { CheckSquare, CalendarDays, Plus, User } from 'lucide-react'
+import { CheckSquare, CalendarDays, Plus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import NewTaskModal from '@/components/tasks/NewTaskModal'
 import ContentItemDrawer from '@/components/calendar/ContentItemDrawer'
@@ -16,9 +16,9 @@ import { getInitials } from '@/lib/utils'
 
 type CampaignWithRefs = Campaign & {
   client?: { name: string; slug: string } | null
-  assignee?: { full_name: string; avatar_url: string | null } | null
 }
 type TaskWithAssignee = Task & { assignee?: { full_name: string } | null }
+type CampaignAssignee = { user_id: string; profile: { full_name: string; avatar_url: string | null } }
 
 interface Props {
   campaign: CampaignWithRefs
@@ -26,11 +26,12 @@ interface Props {
   contentItems: ContentItem[]
   profiles: { id: string; full_name: string }[]
   clients: { id: string; name: string; parent_client_id?: string | null }[]
+  assignees: CampaignAssignee[]
   currentUserId: string
 }
 
 export default function CampaignDetailClient({
-  campaign, tasks: initialTasks, contentItems: initialContent, profiles, clients, currentUserId
+  campaign, tasks: initialTasks, contentItems: initialContent, profiles, clients, assignees, currentUserId
 }: Props) {
   const [tasks, setTasks] = useState(initialTasks)
   const [contentItems, setContentItems] = useState(initialContent)
@@ -67,21 +68,29 @@ export default function CampaignDetailClient({
               )}
             </div>
 
-            {/* Assignee */}
+            {/* Assignees */}
             <div className="flex items-center gap-2 mt-3">
-              {campaign.assignee ? (
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-6 w-6">
-                    <AvatarImage src={campaign.assignee.avatar_url ?? undefined} />
-                    <AvatarFallback className="text-[9px] bg-violet-100 text-violet-700 font-semibold">
-                      {getInitials(campaign.assignee.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm text-gray-600">{campaign.assignee.full_name}</span>
+              {assignees.length > 0 ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex -space-x-1.5">
+                    {assignees.map(a => (
+                      <Avatar key={a.user_id} className="h-6 w-6 ring-2 ring-white">
+                        <AvatarImage src={a.profile.avatar_url ?? undefined} />
+                        <AvatarFallback className="text-[9px] bg-violet-100 text-violet-700 font-semibold">
+                          {getInitials(a.profile.full_name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600">
+                    {assignees.length === 1
+                      ? assignees[0].profile.full_name
+                      : `${assignees[0].profile.full_name} +${assignees.length - 1} more`}
+                  </span>
                 </div>
               ) : (
                 <div className="flex items-center gap-1.5 text-sm text-gray-400">
-                  <User size={13} />
+                  <Users size={13} />
                   <span>Unassigned</span>
                 </div>
               )}

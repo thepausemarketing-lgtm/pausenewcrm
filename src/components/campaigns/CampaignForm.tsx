@@ -23,7 +23,6 @@ const schema = z.object({
   end_date: z.string().optional(),
   budget: z.string().optional(),
   description: z.string().optional(),
-  assigned_to: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -32,11 +31,16 @@ interface Props {
   campaign?: Campaign
   clients: { id: string; name: string }[]
   profiles: { id: string; full_name: string }[]
+  currentUserId: string
+  existingAssigneeIds?: string[]
 }
 
-export default function CampaignForm({ campaign, clients, profiles }: Props) {
+export default function CampaignForm({ campaign, clients, profiles, currentUserId, existingAssigneeIds = [] }: Props) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
+  const [selectedAssignees, setSelectedAssignees] = useState<string[]>(
+    existingAssigneeIds.length > 0 ? existingAssigneeIds : []
+  )
   const supabase = createClient()
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -50,18 +54,30 @@ export default function CampaignForm({ campaign, clients, profiles }: Props) {
       end_date: campaign?.end_date ?? '',
       budget: campaign?.budget?.toString() ?? '',
       description: campaign?.description ?? '',
-      assigned_to: campaign?.assigned_to ?? '',
     },
   })
 
-  const sendTelegramNotification = async (assignedToId: string, campaignName: string, campaignId: string, clientName: string) => {
+  const toggleAssignee = (id: string) => {
+    setSelectedAssignees(prev =>
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    )
+  }
+
+  const sendTelegramToAssignees = async (
+    userIds: string[],
+    campaignName: string,
+    campaignId: string,
+    clientName: string,
+  ) => {
+    const notifyIds = userIds.filter(id => id !== currentUserId)
+    if (!notifyIds.length) return
     try {
-      await fetch('/api/telegram-notify', {
+      fetch('/api/telegram-notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userIds: [assignedToId],
-          message: `🎯 <b>Campaign Assigned to You</b>\n\n<b>${campaignName}</b>\nClient: ${clientName}\n\n<a href="${process.env.NEXT_PUBLIC_APP_URL ?? ''}/app/campaigns/${campaignId}">View Campaign →</a>`,
+          userIds: notifyIds,
+          message: `🎯 <b>Campaign Assigned to You</b>\n\n<b>${campaignName}</b>\nClient: ${clientName}\n\nView it on Pause CRM.`,
         }),
       })
     } catch {
@@ -83,22 +99,34 @@ export default function CampaignForm({ campaign, clients, profiles }: Props) {
       end_date: data.end_date || null,
       budget: data.budget ? parseFloat(data.budget) : null,
       description: data.description || null,
-      assigned_to: data.assigned_to || null,
     }
 
     const clientName = clients.find(c => c.id === data.client_id)?.name ?? ''
 
+    let campaignId: string
+
     if (campaign) {
       const { error } = await supabase.from('campaigns').update(payload).eq('id', campaign.id)
       if (error) { setError(error.message); return }
+      campaignId = campaign.id
 
-      // Notify if assignee changed and is a real user (not cleared, not self)
-      const assigneeChanged = data.assigned_to && data.assigned_to !== campaign.assigned_to
-      if (assigneeChanged && data.assigned_to !== user.id) {
-        await sendTelegramNotification(data.assigned_to!, data.name, campaign.id, clientName)
+      // Figure out newly added assignees (not in previous list)
+      const newlyAdded = selectedAssignees.filter(id => !existingAssigneeIds.includes(id))
+
+      // Sync assignees: delete all, re-insert selected
+      await (supabase as any).from('campaign_assignees').delete().eq('campaign_id', campaignId)
+      if (selectedAssignees.length > 0) {
+        await (supabase as any).from('campaign_assignees').insert(
+          selectedAssignees.map(uid => ({ campaign_id: campaignId, user_id: uid }))
+        )
       }
 
-      router.push(`/app/campaigns/${campaign.id}`)
+      // Notify only newly added assignees
+      if (newlyAdded.length > 0) {
+        sendTelegramToAssignees(newlyAdded, data.name, campaignId, clientName)
+      }
+
+      router.push(`/app/campaigns/${campaignId}`)
     } else {
       const { data: newCampaign, error } = await supabase
         .from('campaigns')
@@ -106,17 +134,23 @@ export default function CampaignForm({ campaign, clients, profiles }: Props) {
         .select()
         .single()
       if (error) { setError(error.message); return }
+      campaignId = newCampaign.id
 
       await supabase.from('activity_logs').insert({
-        actor_id: user.id, action: 'created_campaign', entity_type: 'campaign', entity_id: newCampaign.id,
+        actor_id: user.id, action: 'created_campaign', entity_type: 'campaign', entity_id: campaignId,
       })
 
-      // Notify assignee if set and not the creator
-      if (data.assigned_to && data.assigned_to !== user.id) {
-        await sendTelegramNotification(data.assigned_to, data.name, newCampaign.id, clientName)
+      // Insert assignees
+      if (selectedAssignees.length > 0) {
+        await (supabase as any).from('campaign_assignees').insert(
+          selectedAssignees.map(uid => ({ campaign_id: campaignId, user_id: uid }))
+        )
       }
 
-      router.push(`/app/campaigns/${newCampaign.id}`)
+      // Notify all assignees except creator
+      sendTelegramToAssignees(selectedAssignees, data.name, campaignId, clientName)
+
+      router.push(`/app/campaigns/${campaignId}`)
     }
     router.refresh()
   }
@@ -143,16 +177,28 @@ export default function CampaignForm({ campaign, clients, profiles }: Props) {
           {errors.client_id && <p className="text-xs text-red-500">{errors.client_id.message}</p>}
         </div>
 
-        <div className="space-y-1.5">
-          <Label>Assigned To</Label>
-          <select
-            defaultValue={campaign?.assigned_to ?? ''}
-            onChange={e => setValue('assigned_to', e.target.value)}
-            className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400"
-          >
-            <option value="">Unassigned</option>
-            {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-          </select>
+        {/* Multi-select assignees */}
+        <div className="space-y-1.5 md:col-span-2">
+          <Label>Assignees</Label>
+          <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-36 overflow-y-auto">
+            {profiles.map(p => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2.5 px-3 py-2 hover:bg-gray-50 cursor-pointer text-sm text-gray-700"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedAssignees.includes(p.id)}
+                  onChange={() => toggleAssignee(p.id)}
+                  className="accent-violet-600"
+                />
+                {p.full_name}
+              </label>
+            ))}
+          </div>
+          {selectedAssignees.length === 0 && (
+            <p className="text-xs text-gray-400">No assignees selected</p>
+          )}
         </div>
 
         <div className="space-y-1.5">
