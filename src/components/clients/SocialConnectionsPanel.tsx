@@ -188,7 +188,7 @@ export default function SocialConnectionsPanel({ clientId }: { clientId: string 
                   <div className="text-xs text-gray-400 flex items-center gap-1">
                     {PLATFORM_ICON[conn.platform]} {PLATFORM_LABEL[conn.platform] ?? conn.platform}
                     {conn.last_synced_at && (
-                      <span className="ml-1">· synced {new Date(conn.last_synced_at).toLocaleDateString()}</span>
+                      <span className="ml-1">· synced {new Date(conn.last_synced_at).toLocaleDateString('en-GB')}</span>
                     )}
                   </div>
                 </div>
