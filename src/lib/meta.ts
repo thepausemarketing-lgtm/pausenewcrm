@@ -24,45 +24,73 @@ export async function exchangeForLongLivedToken(shortToken: string): Promise<{ t
   return { token: data.access_token, expires }
 }
 
-// Get page access tokens for ALL pages the user manages (handles pagination)
-export async function getPageAccessTokens(userToken: string) {
-  const allPages: Array<{
-    id: string
-    name: string
-    picture: { data: { url: string } }
-    access_token: string
-    instagram_business_account?: { id: string }
-  }> = []
+type PageEntry = {
+  id: string
+  name: string
+  picture: { data: { url: string } }
+  access_token: string
+  instagram_business_account?: { id: string }
+}
 
+async function fetchAllPages(endpoint: string, token: string): Promise<PageEntry[]> {
+  const pages: PageEntry[] = []
   let url: string | null = null
   let isFirst = true
-
   while (isFirst || url) {
     isFirst = false
-    let data: { data: typeof allPages; paging?: { next?: string } }
-
+    let data: { data: PageEntry[]; paging?: { next?: string } }
     if (url) {
-      // follow the next cursor directly
       const res = await fetch(url)
       data = await res.json()
     } else {
-      data = await metaGet('/me/accounts', userToken, {
+      data = await metaGet(endpoint, token, {
         fields: 'id,name,picture,access_token,instagram_business_account',
         limit: '100',
       })
     }
-
-    allPages.push(...(data.data ?? []))
+    pages.push(...(data.data ?? []))
     url = data.paging?.next ?? null
   }
+  return pages
+}
 
-  return allPages as Array<{
-    id: string
-    name: string
-    picture: { data: { url: string } }
-    access_token: string
-    instagram_business_account?: { id: string }
-  }>
+// Get page access tokens for ALL pages — personal + all Business Manager portfolios
+export async function getPageAccessTokens(userToken: string): Promise<PageEntry[]> {
+  const seenIds = new Set<string>()
+  const allPages: PageEntry[] = []
+
+  const addPages = (pages: PageEntry[]) => {
+    for (const p of pages) {
+      if (!seenIds.has(p.id)) {
+        seenIds.add(p.id)
+        allPages.push(p)
+      }
+    }
+  }
+
+  // 1. Personal pages (me/accounts)
+  try {
+    addPages(await fetchAllPages('/me/accounts', userToken))
+  } catch { /* ignore */ }
+
+  // 2. Pages from each Business Manager portfolio
+  try {
+    const bizData = await metaGet('/me/businesses', userToken, { fields: 'id,name', limit: '50' })
+    const businesses: { id: string; name: string }[] = bizData.data ?? []
+
+    await Promise.all(businesses.map(async (biz) => {
+      try {
+        // owned pages
+        addPages(await fetchAllPages(`/${biz.id}/owned_pages`, userToken))
+      } catch { /* ignore */ }
+      try {
+        // client pages
+        addPages(await fetchAllPages(`/${biz.id}/client_pages`, userToken))
+      } catch { /* ignore */ }
+    }))
+  } catch { /* business_management permission not granted — skip */ }
+
+  return allPages
 }
 
 // Fetch Facebook Page insights for a month
