@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DigestButton from './DigestButton'
+import NotificationHistory from './NotificationHistory'
 
 export default async function WorkspaceSettingsPage() {
   const supabase = await createClient()
@@ -42,6 +43,13 @@ export default async function WorkspaceSettingsPage() {
           Use the button below to send it immediately at any time.
         </p>
         <DigestButton />
+      </div>
+
+      {/* Message History */}
+      <div className="bg-white rounded-xl border border-gray-100 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-1">Message History</h3>
+        <p className="text-sm text-gray-500 mb-4">Last 50 Telegram notifications sent from this workspace.</p>
+        <NotificationHistory />
       </div>
     </div>
   )

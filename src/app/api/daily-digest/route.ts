@@ -37,7 +37,7 @@ function formatDate(iso: string) {
   return `📅 ${d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
 }
 
-async function runDigest() {
+async function runDigest(triggeredBy?: string) {
   const db = getAdminClient()
 
   // 1. Get all active profiles with telegram_chat_id
@@ -116,6 +116,7 @@ async function runDigest() {
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   let sent = 0
+  const sentProfiles: { id: string; name: string }[] = []
 
   for (const profile of profiles) {
     const tasks = tasksByUser[profile.id] ?? []
@@ -168,7 +169,23 @@ async function runDigest() {
     msg += `\nHave a productive evening! 💪\n<i>— Pause CRM</i>`
 
     await sendTelegramMessage(profile.telegram_chat_id!, msg)
+    sentProfiles.push({ id: profile.id, name: profile.full_name })
     sent++
+  }
+
+  // Log the digest send
+  if (sentProfiles.length > 0) {
+    try {
+      await db.from('notification_logs').insert({
+        type: 'daily_digest',
+        recipient_ids: sentProfiles.map(p => p.id),
+        recipient_names: sentProfiles.map(p => p.name),
+        message_preview: `Daily digest — pending tasks & content summary`,
+        triggered_by: triggeredBy ?? null,
+      })
+    } catch {
+      // non-blocking
+    }
   }
 
   return { sent }
@@ -180,7 +197,7 @@ export async function GET(req: Request) {
   if (process.env.CRON_SECRET && auth !== `Bearer ${process.env.CRON_SECRET}`) {
     return new NextResponse('Unauthorized', { status: 401 })
   }
-  const result = await runDigest()
+  const result = await runDigest(undefined) // cron — no triggered_by
   return NextResponse.json({ ok: true, ...result })
 }
 
@@ -193,6 +210,6 @@ export async function POST() {
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
   if ((profile as any)?.role !== 'admin') return new NextResponse('Forbidden', { status: 403 })
 
-  const result = await runDigest()
+  const result = await runDigest(user.id)
   return NextResponse.json({ ok: true, ...result })
 }
