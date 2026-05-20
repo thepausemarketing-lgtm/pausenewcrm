@@ -24,10 +24,39 @@ export async function exchangeForLongLivedToken(shortToken: string): Promise<{ t
   return { token: data.access_token, expires }
 }
 
-// Get page access tokens for all pages the user manages
+// Get page access tokens for ALL pages the user manages (handles pagination)
 export async function getPageAccessTokens(userToken: string) {
-  const data = await metaGet('/me/accounts', userToken, { fields: 'id,name,picture,access_token,instagram_business_account' })
-  return data.data as Array<{
+  const allPages: Array<{
+    id: string
+    name: string
+    picture: { data: { url: string } }
+    access_token: string
+    instagram_business_account?: { id: string }
+  }> = []
+
+  let url: string | null = null
+  let isFirst = true
+
+  while (isFirst || url) {
+    isFirst = false
+    let data: { data: typeof allPages; paging?: { next?: string } }
+
+    if (url) {
+      // follow the next cursor directly
+      const res = await fetch(url)
+      data = await res.json()
+    } else {
+      data = await metaGet('/me/accounts', userToken, {
+        fields: 'id,name,picture,access_token,instagram_business_account',
+        limit: '100',
+      })
+    }
+
+    allPages.push(...(data.data ?? []))
+    url = data.paging?.next ?? null
+  }
+
+  return allPages as Array<{
     id: string
     name: string
     picture: { data: { url: string } }
