@@ -4,22 +4,25 @@ import type { ReportData } from './ClientReport'
 export async function fetchReportData(
   supabase: any,
   clientId: string,
-  month: number,
-  year: number
+  startDate: string,
+  endDate: string
 ): Promise<ReportData | null> {
-  const startDate = `${year}-${String(month).padStart(2, '0')}-01`
-  const endDate = new Date(year, month, 0).toISOString().slice(0, 10) // last day of month
+  // Derive month/year from startDate for social_insights (which still uses month/year columns)
+  const startDateObj = new Date(startDate)
+  const month = startDateObj.getMonth() + 1
+  const year = startDateObj.getFullYear()
 
   const [clientRes, tasksRes, contentRes, campaignsRes, influencersRes, socialInsightsRes] = await Promise.all([
     supabase.from('clients').select('name,logo_url,industry,website,monthly_value,currency').eq('id', clientId).single(),
-    supabase.from('tasks').select('id,status,due_date').eq('client_id', clientId),
+    supabase.from('tasks').select('id,status,due_date').eq('client_id', clientId)
+      .gte('due_date', startDate).lte('due_date', endDate),
     supabase.from('content_items').select('id,status,platform').eq('client_id', clientId)
       .gte('publish_at', startDate).lte('publish_at', endDate + 'T23:59:59'),
     supabase.from('campaigns').select('id,name,status,type').eq('client_id', clientId).not('status', 'eq', 'cancelled'),
     supabase.from('campaign_influencers')
       .select('id, post_url, campaign:campaigns!inner(client_id)')
       .eq('campaign.client_id', clientId),
-    // Fetch social insights for the month
+    // Fetch social insights for the month (derived from startDate)
     supabase
       .from('social_insights')
       .select('*')
@@ -57,8 +60,8 @@ export async function fetchReportData(
 
   return {
     client: clientRes.data,
-    month,
-    year,
+    startDate,
+    endDate,
     tasks: {
       total: tasks.length,
       done: doneTasks,

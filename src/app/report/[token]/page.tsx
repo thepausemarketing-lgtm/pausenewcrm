@@ -23,7 +23,13 @@ export default async function PublicReportPage({ params }: { params: Promise<{ t
   if (!tokenRow) notFound()
   if (new Date(tokenRow.expires_at) < new Date()) notFound()
 
-  const data = await fetchReportData(db, tokenRow.client_id, tokenRow.month, tokenRow.year)
+  // Derive startDate/endDate from month/year (report_tokens table still uses month/year columns)
+  const paddedMonth = String(tokenRow.month).padStart(2, '0')
+  const startDate = `${tokenRow.year}-${paddedMonth}-01`
+  // Last day of the month
+  const endDate = new Date(tokenRow.year, tokenRow.month, 0).toISOString().slice(0, 10)
+
+  const data = await fetchReportData(db, tokenRow.client_id, startDate, endDate)
   if (!data) notFound()
 
   return (

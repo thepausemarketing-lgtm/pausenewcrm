@@ -29,8 +29,8 @@ export type ReportData = {
     monthly_value: number | null
     currency: string | null
   }
-  month: number
-  year: number
+  startDate: string
+  endDate: string
   tasks: {
     total: number
     done: number
@@ -55,9 +55,6 @@ export type ReportData = {
   }
   socialInsights?: SocialInsightRow[]
 }
-
-const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December']
 
 const STATUS_LABEL: Record<string, string> = {
   draft: 'Draft', in_review: 'In Review', approved: 'Approved',
@@ -92,9 +89,14 @@ function fmtNum(n: number | null | undefined): string {
   return String(n)
 }
 
+function formatDateRange(startDate: string, endDate: string): string {
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  return `${fmt(startDate)} to ${fmt(endDate)}`
+}
+
 export default function ClientReport({ data, branded = true }: Props) {
-  const { client, month, year, tasks, content, campaigns, influencers, socialInsights } = data
-  const monthName = MONTH_NAMES[month - 1]
+  const { client, startDate, endDate, tasks, content, campaigns, influencers, socialInsights } = data
   const completionRate = tasks.total > 0 ? Math.round((tasks.done / tasks.total) * 100) : 0
   const publishRate = content.total > 0 ? Math.round((content.published / content.total) * 100) : 0
 
@@ -105,7 +107,7 @@ export default function ClientReport({ data, branded = true }: Props) {
         <div className="max-w-3xl mx-auto flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{client.name}</h1>
-            <p className="text-gray-500 mt-0.5">Monthly Report — {monthName} {year}</p>
+            <p className="text-gray-500 mt-0.5">Report — {formatDateRange(startDate, endDate)}</p>
             {client.industry && <p className="text-sm text-gray-400 mt-0.5 capitalize">{client.industry}</p>}
           </div>
           {branded && (
@@ -301,7 +303,7 @@ export default function ClientReport({ data, branded = true }: Props) {
         {branded && (
           <div className="border-t border-gray-100 pt-6 flex items-center justify-between text-xs text-gray-400">
             <span>Pause Marketing — Internal Report</span>
-            <span>{monthName} {year}</span>
+            <span>{formatDateRange(startDate, endDate)}</span>
           </div>
         )}
       </div>

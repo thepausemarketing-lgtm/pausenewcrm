@@ -8,15 +8,20 @@ import { toast } from 'sonner'
 
 interface Props {
   clientId: string
-  month: number
-  year: number
+  startDate: string
+  endDate: string
   userId: string
 }
 
-export default function ShareReportButton({ clientId, month, year, userId }: Props) {
+export default function ShareReportButton({ clientId, startDate, endDate, userId }: Props) {
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+
+  // Derive month/year from startDate for the report_tokens table (which uses month/year columns)
+  const startDateObj = new Date(startDate)
+  const month = startDateObj.getMonth() + 1
+  const year = startDateObj.getFullYear()
 
   const handleShare = async () => {
     setLoading(true)
