@@ -4,25 +4,20 @@ import { createClient as createAdmin } from '@supabase/supabase-js'
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 
-async function sendTelegramMessage(chatId: string, text: string) {
+async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
   try {
-    await fetch(`${TELEGRAM_API}/sendMessage`, {
+    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
     })
+    const json = await res.json()
+    return json.ok === true
   } catch {
-    // Best-effort — don't break the main flow if Telegram is unreachable
+    return false
   }
 }
 
-/**
- * POST /api/telegram-notify
- * Body: { userIds: string[], message: string, type?: string, triggeredBy?: string }
- *
- * Looks up each user's telegram_chat_id and sends them the message.
- * Fire-and-forget: always returns 200 so the caller is never blocked.
- */
 export async function POST(request: Request) {
   if (!process.env.TELEGRAM_BOT_TOKEN) {
     return NextResponse.json({ ok: false, error: 'TELEGRAM_BOT_TOKEN not set' }, { status: 200 })
@@ -45,29 +40,37 @@ export async function POST(request: Request) {
     .select('id, full_name, telegram_chat_id')
     .in('id', userIds)
 
-  const sends = (profiles ?? [])
-    .filter((p: any) => p.telegram_chat_id)
-    .map((p: any) => sendTelegramMessage(p.telegram_chat_id, message))
+  let sent = 0
+  const logs: object[] = []
 
-  await Promise.allSettled(sends)
+  for (const p of (profiles ?? []) as any[]) {
+    let status = 'failed'
+    if (p.telegram_chat_id) {
+      const ok = await sendTelegramMessage(p.telegram_chat_id, message)
+      status = ok ? 'delivered' : 'failed'
+      if (ok) sent++
+    }
+    logs.push({
+      type: type ?? 'notification',
+      recipient_id: p.id,
+      recipient_name: p.full_name,
+      full_message: message,
+      status,
+      triggered_by: triggeredBy ?? null,
+    })
+  }
 
-  // Log this notification (best-effort)
+  // Log all sends (best-effort)
   try {
     const db = createAdmin(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { autoRefreshToken: false, persistSession: false } }
     )
-    await db.from('notification_logs').insert({
-      type: type ?? 'notification',
-      recipient_ids: userIds,
-      recipient_names: (profiles ?? []).map((p: any) => p.full_name),
-      message_preview: message.replace(/<[^>]+>/g, '').slice(0, 200),
-      triggered_by: triggeredBy ?? null,
-    })
+    await db.from('notification_logs').insert(logs)
   } catch {
     // non-blocking
   }
 
-  return NextResponse.json({ ok: true, sent: sends.length })
+  return NextResponse.json({ ok: true, sent })
 }

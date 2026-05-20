@@ -4,15 +4,17 @@ import { createClient } from '@supabase/supabase-js'
 
 const TELEGRAM_API = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`
 
-async function sendTelegramMessage(chatId: string, text: string) {
+async function sendTelegramMessage(chatId: string, text: string): Promise<boolean> {
   try {
-    await fetch(`${TELEGRAM_API}/sendMessage`, {
+    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' }),
     })
+    const json = await res.json()
+    return json.ok === true
   } catch {
-    // best-effort
+    return false
   }
 }
 
@@ -116,7 +118,7 @@ async function runDigest(triggeredBy?: string) {
 
   const today = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   let sent = 0
-  const sentProfiles: { id: string; name: string }[] = []
+  const sentProfiles: { id: string; name: string; status: string; message: string }[] = []
 
   for (const profile of profiles) {
     const tasks = tasksByUser[profile.id] ?? []
@@ -168,21 +170,24 @@ async function runDigest(triggeredBy?: string) {
 
     msg += `\nHave a productive evening! 💪\n<i>— Pause CRM</i>`
 
-    await sendTelegramMessage(profile.telegram_chat_id!, msg)
-    sentProfiles.push({ id: profile.id, name: profile.full_name })
-    sent++
+    const ok = await sendTelegramMessage(profile.telegram_chat_id!, msg)
+    if (ok) sent++
+    sentProfiles.push({ id: profile.id, name: profile.full_name, status: ok ? 'delivered' : 'failed', message: msg })
   }
 
-  // Log the digest send
+  // Log per-recipient
   if (sentProfiles.length > 0) {
     try {
-      await db.from('notification_logs').insert({
-        type: 'daily_digest',
-        recipient_ids: sentProfiles.map(p => p.id),
-        recipient_names: sentProfiles.map(p => p.name),
-        message_preview: `Daily digest — pending tasks & content summary`,
-        triggered_by: triggeredBy ?? null,
-      })
+      await db.from('notification_logs').insert(
+        sentProfiles.map(p => ({
+          type: 'daily_digest',
+          recipient_id: p.id,
+          recipient_name: p.name,
+          full_message: p.message,
+          status: p.status,
+          triggered_by: triggeredBy ?? null,
+        }))
+      )
     } catch {
       // non-blocking
     }
