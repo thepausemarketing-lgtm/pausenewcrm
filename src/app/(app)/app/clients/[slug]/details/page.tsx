@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { Mail, Phone, ExternalLink, Star, KeyRound, RefreshCw, Share2 } from 'lucide-react'
+import { Mail, Phone, ExternalLink, Star, KeyRound, RefreshCw } from 'lucide-react'
 import { CAMPAIGN_STATUSES } from '@/lib/constants'
 import { formatDate } from '@/lib/utils'
 import StatusBadge from '@/components/shared/StatusBadge'
@@ -157,18 +157,6 @@ export default async function ClientDetailsPage({ params }: { params: Promise<{ 
             </div>
           </Link>
         </div>
-      </div>
-
-      {/* Social Section */}
-      <div className="bg-white rounded-xl border border-gray-100 p-5">
-        <h3 className="font-semibold text-gray-900 mb-4">Social</h3>
-        <Link
-          href={`${basePath}/social`}
-          className="flex items-center gap-3 p-3 rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
-        >
-          <Share2 size={16} className="text-gray-400" />
-          <p className="text-sm font-medium text-gray-900">Manage social accounts</p>
-        </Link>
       </div>
 
       {/* Connected Channels Section */}
