@@ -115,7 +115,9 @@ export default function CampaignInfluencersSection({ campaignId, initialSteps, i
   }
 
   /* ── Remove influencer ── */
-  const removeInfluencer = async (id: string) => {
+  const removeInfluencer = async (id: string, name: string) => {
+    const confirmed = window.confirm(`Remove ${name} from this campaign? Their progress will be deleted.`)
+    if (!confirmed) return
     await (supabase as any).from('campaign_influencers').delete().eq('id', id)
     setInfluencers(prev => prev.filter(i => i.id !== id))
     setCompletions(prev => {
@@ -285,7 +287,7 @@ export default function CampaignInfluencersSection({ campaignId, initialSteps, i
                   </td>
                   <td className="py-3 px-3">
                     <button
-                      onClick={() => removeInfluencer(inf.id)}
+                      onClick={() => removeInfluencer(inf.id, inf.influencer.name)}
                       className="text-gray-200 group-hover:text-gray-400 hover:!text-red-400 transition-colors"
                     >
                       <Trash2 size={14} />
