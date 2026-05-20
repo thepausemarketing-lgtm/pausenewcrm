@@ -48,9 +48,24 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
   const [insightsMap, setInsightsMap] = useState(initialInsights)
   const [loadingId, setLoadingId] = useState<string | null>(null)
   const [showModal, setShowModal] = useState(false)
-  const [token, setToken] = useState('')
   const [pages, setPages] = useState<Page[]>([])
   const [fetching, setFetching] = useState(false)
+
+  const openModal = async () => {
+    setShowModal(true)
+    setPages([])
+    setFetching(true)
+    try {
+      const res = await fetch('/api/meta/pages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) })
+      const json = await res.json()
+      if (json.error) throw new Error(json.error)
+      setPages(json.pages)
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to fetch pages')
+      setShowModal(false)
+    }
+    setFetching(false)
+  }
 
   const fetchPages = async () => {
     setFetching(true)
@@ -58,7 +73,7 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
       const res = await fetch('/api/meta/pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify({}), // uses META_USER_ACCESS_TOKEN from server env
       })
       const json = await res.json()
       if (json.error) throw new Error(json.error)
@@ -136,7 +151,7 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
             <h3 className="text-sm font-semibold text-gray-900">Connected Social Accounts</h3>
             <p className="text-xs text-gray-400 mt-0.5">Connect social accounts to fetch follower counts and engagement insights.</p>
           </div>
-          <Button onClick={() => setShowModal(true)} size="sm" className="gap-1.5">
+          <Button onClick={openModal} size="sm" className="gap-1.5">
             <Link2 size={13} /> Connect Meta (Instagram + Facebook)
           </Button>
         </div>
@@ -266,36 +281,16 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
         </div>
       )}
 
-      {/* Token paste modal */}
+      {/* Page picker modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Connect Meta Account</h3>
-            <p className="text-xs text-gray-500 mb-4">
-              Go to{' '}
-              <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="text-violet-600 underline">
-                Graph Explorer
-              </a>
-              , select <strong>Pause CRM v2</strong>, generate a token with{' '}
-              <code className="bg-gray-100 px-1 rounded text-xs">pages_show_list, pages_read_engagement, read_insights, instagram_basic, instagram_manage_insights</code>{' '}
-              permissions, and paste it below.
-            </p>
-            <textarea
-              value={token}
-              onChange={e => setToken(e.target.value)}
-              placeholder="Paste access token here..."
-              className="w-full border border-gray-200 rounded-lg p-3 text-xs font-mono h-24 resize-none focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
-            {pages.length === 0 ? (
-              <div className="flex gap-2 mt-3">
-                <Button variant="outline" size="sm" onClick={() => { setShowModal(false); setToken('') }} className="flex-1">Cancel</Button>
-                <Button size="sm" onClick={fetchPages} disabled={!token || fetching} className="flex-1">
-                  {fetching ? 'Fetching…' : 'Fetch Pages'}
-                </Button>
-              </div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Select a Facebook Page</h3>
+            <p className="text-xs text-gray-500 mb-4">Choose which page belongs to this client. Linked Instagram accounts connect automatically.</p>
+            {fetching ? (
+              <div className="py-8 text-center text-sm text-gray-400">Loading pages…</div>
             ) : (
-              <div className="mt-3 space-y-2">
-                <p className="text-xs text-gray-500 font-medium">Select a page to connect:</p>
+              <div className="space-y-2">
                 {pages.map(page => (
                   <button key={page.id} onClick={() => connectPage(page)}
                     className="w-full flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg hover:border-violet-300 hover:bg-violet-50 transition-colors text-left">
@@ -309,7 +304,7 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
                     </div>
                   </button>
                 ))}
-                <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => { setPages([]); setToken('') }}>← Back</Button>
+                <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => setShowModal(false)}>Cancel</Button>
               </div>
             )}
           </div>

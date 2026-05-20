@@ -3,7 +3,10 @@ import { getPageAccessTokens, exchangeForLongLivedToken } from '@/lib/meta'
 
 export async function POST(request: NextRequest) {
   try {
-    const { token } = await request.json()
+    const body = await request.json().catch(() => ({}))
+    // Use stored workspace token if no token provided
+    const token = body.token || process.env.META_USER_ACCESS_TOKEN
+    if (!token) return NextResponse.json({ error: 'No access token configured. Add META_USER_ACCESS_TOKEN to Vercel env vars.' }, { status: 400 })
     const { token: longToken } = await exchangeForLongLivedToken(token)
     const pages = await getPageAccessTokens(longToken)
     return NextResponse.json({ pages })
