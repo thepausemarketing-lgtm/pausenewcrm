@@ -283,14 +283,16 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
 
       {/* Page picker modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
-            <h3 className="text-base font-semibold text-gray-900 mb-1">Select a Facebook Page</h3>
-            <p className="text-xs text-gray-500 mb-4">Choose which page belongs to this client. Linked Instagram accounts connect automatically.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md flex flex-col" style={{ maxHeight: '80vh' }}>
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-base font-semibold text-gray-900">Select a Facebook Page</h3>
+              <p className="text-xs text-gray-500 mt-1">Choose which page belongs to this client. Linked Instagram connects automatically.</p>
+            </div>
             {fetching ? (
-              <div className="py-8 text-center text-sm text-gray-400">Loading pages…</div>
+              <div className="py-12 text-center text-sm text-gray-400">Loading pages…</div>
             ) : (
-              <div className="space-y-2">
+              <div className="overflow-y-auto flex-1 p-3 space-y-2">
                 {pages.map(page => (
                   <button key={page.id} onClick={() => connectPage(page)}
                     className="w-full flex items-center gap-3 p-2.5 border border-gray-200 rounded-lg hover:border-violet-300 hover:bg-violet-50 transition-colors text-left">
@@ -304,9 +306,11 @@ export default function SocialAccountsClient({ client, accounts: initialAccounts
                     </div>
                   </button>
                 ))}
-                <Button variant="outline" size="sm" className="w-full mt-1" onClick={() => setShowModal(false)}>Cancel</Button>
               </div>
             )}
+            <div className="p-3 border-t border-gray-100">
+              <Button variant="outline" size="sm" className="w-full" onClick={() => setShowModal(false)}>Cancel</Button>
+            </div>
           </div>
         </div>
       )}
