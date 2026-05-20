@@ -4,7 +4,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutDashboard, Users, CalendarDays, CheckSquare,
-  BarChart3, Settings, LogOut, UserCog, RefreshCw,
+  Megaphone, BarChart3, Settings, LogOut, UserCog, RefreshCw,
   Bell, Menu, X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { href: '/app/clients',       icon: Users,           label: 'Clients' },
   { href: '/app/calendar',      icon: CalendarDays,    label: 'Calendar' },
   { href: '/app/tasks',         icon: CheckSquare,     label: 'Tasks' },
+  { href: '/app/campaigns',     icon: Megaphone,       label: 'Campaigns' },
   { href: '/app/renewals',      icon: RefreshCw,       label: 'Renewals' },
   { href: '/app/reports',       icon: BarChart3,       label: 'Reports' },
   { href: '/app/settings/team', icon: UserCog,         label: 'Team' },
