@@ -23,6 +23,7 @@ const schema = z.object({
   end_date: z.string().optional(),
   budget: z.string().optional(),
   description: z.string().optional(),
+  assigned_to: z.string().optional(),
 })
 
 type FormData = z.infer<typeof schema>
@@ -30,9 +31,10 @@ type FormData = z.infer<typeof schema>
 interface Props {
   campaign?: Campaign
   clients: { id: string; name: string }[]
+  profiles: { id: string; full_name: string }[]
 }
 
-export default function CampaignForm({ campaign, clients }: Props) {
+export default function CampaignForm({ campaign, clients, profiles }: Props) {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
@@ -48,8 +50,24 @@ export default function CampaignForm({ campaign, clients }: Props) {
       end_date: campaign?.end_date ?? '',
       budget: campaign?.budget?.toString() ?? '',
       description: campaign?.description ?? '',
+      assigned_to: campaign?.assigned_to ?? '',
     },
   })
+
+  const sendTelegramNotification = async (assignedToId: string, campaignName: string, campaignId: string, clientName: string) => {
+    try {
+      await fetch('/api/telegram-notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userIds: [assignedToId],
+          message: `🎯 <b>Campaign Assigned to You</b>\n\n<b>${campaignName}</b>\nClient: ${clientName}\n\n<a href="${process.env.NEXT_PUBLIC_APP_URL ?? ''}/app/campaigns/${campaignId}">View Campaign →</a>`,
+        }),
+      })
+    } catch {
+      // best-effort
+    }
+  }
 
   const onSubmit = async (data: FormData) => {
     setError(null)
@@ -65,11 +83,21 @@ export default function CampaignForm({ campaign, clients }: Props) {
       end_date: data.end_date || null,
       budget: data.budget ? parseFloat(data.budget) : null,
       description: data.description || null,
+      assigned_to: data.assigned_to || null,
     }
+
+    const clientName = clients.find(c => c.id === data.client_id)?.name ?? ''
 
     if (campaign) {
       const { error } = await supabase.from('campaigns').update(payload).eq('id', campaign.id)
       if (error) { setError(error.message); return }
+
+      // Notify if assignee changed and is a real user (not cleared, not self)
+      const assigneeChanged = data.assigned_to && data.assigned_to !== campaign.assigned_to
+      if (assigneeChanged && data.assigned_to !== user.id) {
+        await sendTelegramNotification(data.assigned_to!, data.name, campaign.id, clientName)
+      }
+
       router.push(`/app/campaigns/${campaign.id}`)
     } else {
       const { data: newCampaign, error } = await supabase
@@ -78,9 +106,16 @@ export default function CampaignForm({ campaign, clients }: Props) {
         .select()
         .single()
       if (error) { setError(error.message); return }
+
       await supabase.from('activity_logs').insert({
         actor_id: user.id, action: 'created_campaign', entity_type: 'campaign', entity_id: newCampaign.id,
       })
+
+      // Notify assignee if set and not the creator
+      if (data.assigned_to && data.assigned_to !== user.id) {
+        await sendTelegramNotification(data.assigned_to, data.name, newCampaign.id, clientName)
+      }
+
       router.push(`/app/campaigns/${newCampaign.id}`)
     }
     router.refresh()
@@ -109,6 +144,28 @@ export default function CampaignForm({ campaign, clients }: Props) {
         </div>
 
         <div className="space-y-1.5">
+          <Label>Assigned To</Label>
+          <select
+            defaultValue={campaign?.assigned_to ?? ''}
+            onChange={e => setValue('assigned_to', e.target.value)}
+            className="w-full h-9 px-3 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400"
+          >
+            <option value="">Unassigned</option>
+            {profiles.map(p => <option key={p.id} value={p.id}>{p.full_name}</option>)}
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Status</Label>
+          <Select defaultValue={campaign?.status ?? 'draft'} onValueChange={v => setValue('status', v as FormData['status'])}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CAMPAIGN_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
           <Label>Type</Label>
           <Select defaultValue={campaign?.type ?? 'other'} onValueChange={v => setValue('type', v as FormData['type'])}>
             <SelectTrigger><SelectValue /></SelectTrigger>
@@ -118,16 +175,6 @@ export default function CampaignForm({ campaign, clients }: Props) {
               <SelectItem value="always_on">Always On</SelectItem>
               <SelectItem value="event">Event</SelectItem>
               <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label>Status</Label>
-          <Select defaultValue={campaign?.status ?? 'draft'} onValueChange={v => setValue('status', v as FormData['status'])}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CAMPAIGN_STATUSES.map(s => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

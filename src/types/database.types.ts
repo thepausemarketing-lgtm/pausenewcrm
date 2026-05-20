@@ -167,6 +167,7 @@ export interface Database {
           end_date: string | null
           budget: number | null
           description: string | null
+          assigned_to: string | null
           created_by: string | null
           created_at: string
           updated_at: string
@@ -181,6 +182,7 @@ export interface Database {
           end_date?: string | null
           budget?: number | null
           description?: string | null
+          assigned_to?: string | null
           created_by?: string | null
           created_at?: string
           updated_at?: string
@@ -194,6 +196,7 @@ export interface Database {
           end_date?: string | null
           budget?: number | null
           description?: string | null
+          assigned_to?: string | null
           updated_at?: string
         }
         Relationships: []

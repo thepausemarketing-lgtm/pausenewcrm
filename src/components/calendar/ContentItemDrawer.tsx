@@ -54,6 +54,8 @@ function DateTimeInput({ value, onChange, className }: { value: string; onChange
 interface Props {
   item?: ItemWithRelations
   defaultDate?: string
+  defaultCampaignId?: string
+  defaultClientId?: string
   clients: { id: string; name: string; parent_client_id?: string | null }[]
   canApprove: boolean
   onClose: () => void
@@ -79,7 +81,7 @@ function getOverallStatus(
   return { label: '🕐 Not Started', color: '#6b7280' }
 }
 
-export default function ContentItemDrawer({ item, defaultDate, clients, canApprove, onClose, onUpdate, onCreate, onDelete }: Props) {
+export default function ContentItemDrawer({ item, defaultDate, defaultCampaignId, defaultClientId, clients, canApprove, onClose, onUpdate, onCreate, onDelete }: Props) {
   const { profile } = useRole()
   const supabase = createClient()
   const isNew = !item
@@ -103,7 +105,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
       : defaultDate ? `${defaultDate}T09:00` : ''
   )
   const [clientId, setClientId] = useState(
-    item ? ((item.client as { id: string } | null)?.id ?? '') : ''
+    item ? ((item.client as { id: string } | null)?.id ?? '') : (defaultClientId ?? '')
   )
   const [designStatus, setDesignStatus] = useState(item?.design_status ?? 'not_started')
   const [internalReview, setInternalReview] = useState(item?.internal_review ?? 'pending')
@@ -199,7 +201,7 @@ export default function ContentItemDrawer({ item, defaultDate, clients, canAppro
       if (!clientId) { setSaveError('Please select a client'); setSaving(false); return }
       const { data: rawData, error } = await supabase
         .from('content_items')
-        .insert({ ...payload, client_id: clientId, created_by: profile.id })
+        .insert({ ...payload, client_id: clientId, campaign_id: defaultCampaignId || null, created_by: profile.id })
         .select('*, client:clients(name,slug,id), assignee:profiles!content_items_assigned_to_fkey(full_name), content_assignees(user_id, user:profiles!content_assignees_user_id_fkey(id,full_name,avatar_url))')
         .single()
       const data = rawData as ItemWithRelations | null

@@ -19,6 +19,8 @@ type TaskWithRelations = Task & {
 
 interface Props {
   defaultStatus: string
+  defaultCampaignId?: string
+  defaultClientId?: string
   clients: { id: string; name: string; parent_client_id?: string | null }[]
   profiles: { id: string; full_name: string }[]
   currentUserId: string
@@ -40,13 +42,13 @@ const RECURRENCE_UNIT: Record<string, string> = {
 
 const sel = 'w-full h-9 px-2 text-sm border border-gray-200 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-violet-400'
 
-export default function NewTaskModal({ defaultStatus, clients, profiles, currentUserId, onCreated, onClose }: Props) {
+export default function NewTaskModal({ defaultStatus, defaultCampaignId, defaultClientId, clients, profiles, currentUserId, onCreated, onClose }: Props) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [priority, setPriority] = useState('medium')
   const [category, setCategory] = useState('other')
   const [selectedAssignees, setSelectedAssignees] = useState<string[]>([currentUserId])
-  const [clientId, setClientId] = useState('')
+  const [clientId, setClientId] = useState(defaultClientId ?? '')
   const [dueDate, setDueDate] = useState('')
   const [recurrenceType, setRecurrenceType] = useState('none')
   const [recurrenceInterval, setRecurrenceInterval] = useState(1)
@@ -72,6 +74,7 @@ export default function NewTaskModal({ defaultStatus, clients, profiles, current
         status: defaultStatus as Task['status'],
         assigned_to: primaryAssignee,
         client_id: clientId || null,
+        campaign_id: defaultCampaignId || null,
         due_date: dueDate || null,
         created_by: currentUserId,
         recurrence_type: recurrenceType,
