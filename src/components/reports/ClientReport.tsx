@@ -176,13 +176,14 @@ export default function ClientReport({ data, branded = true }: Props) {
                     ) : (
                       <div className="grid grid-cols-2 gap-2">
                         {[
-                          { label: 'Followers',     value: fmtNum(row.followers) },
-                          { label: 'Reach',         value: fmtNum(row.reach) },
-                          { label: 'Impressions',   value: fmtNum(row.impressions) },
-                          { label: 'Engagement',    value: fmtNum(row.engagement) },
+                          { label: 'Followers',   value: row.followers != null ? fmtNum(row.followers) : '—' },
+                          { label: 'Engagement',  value: row.engagement != null ? fmtNum(row.engagement) : '—' },
+                          { label: 'Reach',       value: (row.reach != null && row.reach > 0) ? fmtNum(row.reach) : '—' },
+                          { label: 'Impressions', value: (row.impressions != null && row.impressions > 0) ? fmtNum(row.impressions) : '—' },
+                          ...(row.posts_count != null && row.posts_count > 0 ? [{ label: 'Posts', value: fmtNum(row.posts_count) }] : []),
                         ].map(m => (
                           <div key={m.label} className="bg-gray-50 rounded-lg p-2.5">
-                            <p className="text-lg font-bold text-gray-900">{m.value}</p>
+                            <p className={`text-lg font-bold ${m.value === '—' ? 'text-gray-300' : 'text-gray-900'}`}>{m.value}</p>
                             <p className="text-xs text-gray-400 mt-0.5">{m.label}</p>
                           </div>
                         ))}
