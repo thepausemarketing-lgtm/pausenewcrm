@@ -16,6 +16,10 @@ export default async function ClientsPage({
   const params = await searchParams
   const supabase = await createClient()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const isAdmin = myProfile?.role === 'admin'
+
   let query = supabase.from('clients').select('id,name,slug,status,industry,monthly_value,currency,health_score,website,parent_client_id,logo_url').order('name')
 
   if (params.status) query = query.eq('status', params.status as ClientStatus)
@@ -142,8 +146,12 @@ export default async function ClientsPage({
                       <td className="px-4 py-3"><ClientStatusBadge status={client.status} /></td>
                       <td className="px-4 py-3 text-gray-500 text-xs hidden sm:table-cell">{client.industry ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-700 hidden sm:table-cell">
-                        {formatCurrency(client.monthly_value, client.currency)}
-                        {client.monthly_value && <span className="text-xs text-gray-400 ml-1">{client.currency}</span>}
+                        {isAdmin ? (
+                          <>
+                            {formatCurrency(client.monthly_value, client.currency)}
+                            {client.monthly_value && <span className="text-xs text-gray-400 ml-1">{client.currency}</span>}
+                          </>
+                        ) : '—'}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
                         {client.health_score ? (

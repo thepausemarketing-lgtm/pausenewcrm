@@ -34,6 +34,7 @@ export interface Database {
           designation_id: string | null
           reports_to: string | null
           telegram_chat_id: string | null
+          can_view_credentials: boolean
           created_at: string
           updated_at: string
         }
@@ -47,6 +48,7 @@ export interface Database {
           designation_id?: string | null
           reports_to?: string | null
           telegram_chat_id?: string | null
+          can_view_credentials?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -59,6 +61,7 @@ export interface Database {
           designation_id?: string | null
           reports_to?: string | null
           telegram_chat_id?: string | null
+          can_view_credentials?: boolean
           updated_at?: string
         }
         Relationships: []

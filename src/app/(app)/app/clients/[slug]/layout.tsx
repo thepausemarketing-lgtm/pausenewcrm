@@ -25,6 +25,10 @@ export default async function ClientLayout({
   const { data: client } = await supabase.from('clients').select('id,name,slug,status,industry,website,monthly_value,currency,health_score,logo_url').eq('slug', slug).single()
   if (!client) notFound()
 
+  const { data: { user } } = await supabase.auth.getUser()
+  const { data: myProfile } = await supabase.from('profiles').select('role').eq('id', user!.id).single()
+  const isAdmin = myProfile?.role === 'admin'
+
   const basePath = `/app/clients/${slug}`
 
   return (
@@ -53,7 +57,7 @@ export default async function ClientLayout({
                   {client.website.replace(/^https?:\/\//, '')} <ExternalLink size={12} className="shrink-0" />
                 </a>
               )}
-              {client.monthly_value && (
+              {isAdmin && client.monthly_value && (
                 <span className="font-medium text-gray-700">{formatCurrency(client.monthly_value)}/mo</span>
               )}
             </div>

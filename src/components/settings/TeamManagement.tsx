@@ -237,6 +237,25 @@ export default function TeamManagement({ profiles: initialProfiles, designations
                 This person will be able to see all work assigned to their direct and indirect reports.
               </p>
             </div>
+
+            <div className="col-span-2 border-t border-gray-100 pt-3">
+              <p className="text-xs font-medium text-gray-700 mb-2">Permissions</p>
+              <label className="flex items-center justify-between gap-3 cursor-pointer select-none">
+                <div>
+                  <p className="text-xs text-gray-700">Can view client credentials (logins)</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Allow this person to see stored passwords &amp; access keys</p>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={profile.can_view_credentials}
+                  onClick={() => handleUpdate(profile.id, { can_view_credentials: !profile.can_view_credentials })}
+                  className={`relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors focus:outline-none ${profile.can_view_credentials ? 'bg-violet-600' : 'bg-gray-200'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${profile.can_view_credentials ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+              </label>
+            </div>
           </div>
         )}
 
